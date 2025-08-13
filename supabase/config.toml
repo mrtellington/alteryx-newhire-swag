@@ -1,5 +1,13 @@
 project_id = "emnemfewmpjczkgwzrjv"
 
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.email.template.magic_link]
+content_path = "./supabase/functions/auth-email/index.ts"
+
 [functions.address-autocomplete]
 verify_jwt = true
 
@@ -7,4 +15,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.cognito-webhook]
+verify_jwt = false
+
+[functions.auth-email]
 verify_jwt = false
