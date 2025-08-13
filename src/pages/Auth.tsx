@@ -137,8 +137,8 @@ const Auth = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <img
-              src="/lovable-uploads/f10ed5e4-2783-4e68-a9ce-74a7ae05cf67.png"
-              alt="Alteryx New Hire Bundle products including t-shirt, water bottle, and stickers"
+              src="/lovable-uploads/47a14703-bd92-4198-9842-accafdefed92.png"
+              alt="Alteryx New Hire Bundle contents: tote, hat, sticker, water bottle, tee"
               className="h-32 w-auto object-contain"
             />
           </div>
