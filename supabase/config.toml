@@ -3,13 +3,14 @@ project_id = "emnemfewmpjczkgwzrjv"
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-enable_confirmations = false
+enable_confirmations = true
 
 [auth.email.template.magic_link]
 content_path = "./supabase/functions/auth-email/index.ts"
 
 [auth.email.template.magic_link.env]
 AUTH_EMAIL_HOOK_SECRET = "env:AUTH_EMAIL_HOOK_SECRET"
+RESEND_API_KEY = "env:RESEND_API_KEY"
 
 [functions.address-autocomplete]
 verify_jwt = true
