@@ -87,12 +87,16 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
   }, [form.watch("country")]);
 
   const applyAutocomplete = (addr: NormalizedAddress) => {
+    console.log("Applying autocomplete address:", addr);
     form.setValue("line1", addr.line1 || "");
     form.setValue("line2", addr.line2 || "");
     form.setValue("city", addr.city || "");
     form.setValue("region", addr.region || "");
     form.setValue("postal_code", addr.postal_code || "");
-    if (addr.country) form.setValue("country", addr.country);
+    if (addr.country) {
+      console.log("Setting country to:", addr.country);
+      form.setValue("country", addr.country);
+    }
     form.clearErrors();
   };
 
