@@ -132,7 +132,7 @@ const Auth = () => {
   };
 
   return (
-    <main className="min-h-screen bg-primary flex items-start justify-center pt-16 px-4">
+    <main className="min-h-screen bg-brand-blue flex items-start justify-center pt-16 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
