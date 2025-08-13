@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.send-order-confirmation]
 verify_jwt = true
+
+[functions.cognito-webhook]
+verify_jwt = false
