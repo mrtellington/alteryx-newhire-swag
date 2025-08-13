@@ -110,8 +110,15 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
       const { data: orderId, error: rpcErr } = await supabase.rpc("place_order");
       if (rpcErr) throw rpcErr;
 
-      toast({ title: "Order placed!", description: "Your claim was successful." });
-      onSuccess?.(orderId as unknown as string);
+      const orderIdStr = orderId as unknown as string;
+
+      // Fire-and-forget email confirmation (do not block success)
+      supabase.functions
+        .invoke("send-order-confirmation", { body: { orderId: orderIdStr } })
+        .catch((e) => console.error("send-order-confirmation failed", e));
+
+      toast({ title: "Order placed!", description: "Your claim was successful. A confirmation email is on its way." });
+      onSuccess?.(orderIdStr);
       form.reset();
     } catch (e: any) {
       const msg = e?.message || "Something went wrong";

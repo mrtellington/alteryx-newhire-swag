@@ -2,3 +2,6 @@ project_id = "emnemfewmpjczkgwzrjv"
 
 [functions.address-autocomplete]
 verify_jwt = true
+
+[functions.send-order-confirmation]
+verify_jwt = true
