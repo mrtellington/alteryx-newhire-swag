@@ -22,10 +22,15 @@ export default function AddressAutocomplete({ onSelect }: AddressAutocompletePro
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const [locked, setLocked] = useState(false);
   const debounceRef = useRef<number | null>(null);
   const sessiontoken = useMemo(() => crypto.randomUUID(), []);
 
   useEffect(() => {
+    if (locked) {
+      setSuggestions([]);
+      return;
+    }
     if (!query || query.length < 3) {
       setSuggestions([]);
       return;
@@ -46,7 +51,7 @@ export default function AddressAutocomplete({ onSelect }: AddressAutocompletePro
       }
     }, 300);
     // cleanup handled by resetting debounce above
-  }, [query, sessiontoken]);
+  }, [query, sessiontoken, locked]);
 
   const handlePick = async (s: Suggestion) => {
     try {
@@ -58,6 +63,7 @@ export default function AddressAutocomplete({ onSelect }: AddressAutocompletePro
       if (!addr) throw new Error("No address returned");
       setQuery(s.description);
       setSuggestions([]);
+      setLocked(true);
       onSelect(addr);
     } catch (e: any) {
       toast({ title: "Address lookup failed", description: e.message || "Try entering manually" });
@@ -69,7 +75,8 @@ export default function AddressAutocomplete({ onSelect }: AddressAutocompletePro
       <Input
         placeholder="Search your address"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => { setLocked(false); setQuery(e.target.value); }}
+        autoComplete="off"
         aria-autocomplete="list"
       />
       {suggestions.length > 0 && (

@@ -25,6 +25,10 @@ const addressSchema = z
     region: z.string().min(2, "Region/State is required"),
     postal_code: z.string().min(2, "Postal code is required"),
     country: z.string().length(2, "Select a country"), // ISO Alpha-2 code
+    phone: z
+      .string()
+      .min(7, "Phone number is required")
+      .regex(/^[+]?[-().\s\d]{7,20}$/, "Enter a valid phone number"),
   })
   .superRefine((val, ctx) => {
     const pattern = postalCodePatterns[val.country];
@@ -66,6 +70,7 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
       region: "",
       postal_code: "",
       country: "US",
+      phone: "",
     },
   });
 
@@ -212,6 +217,19 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
                   ))}
                 </SelectContent>
               </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phone"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone Number</FormLabel>
+              <FormControl>
+                <Input placeholder="e.g., +1 555 123 4567" {...field} />
+              </FormControl>
               <FormMessage />
             </FormItem>
           )}
