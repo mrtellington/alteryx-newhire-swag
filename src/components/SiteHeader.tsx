@@ -35,11 +35,18 @@ export default function SiteHeader() {
             loading="eager"
           />
         </a>
-        {isAdmin && (
-          <Button variant="outline" onClick={() => window.location.href = "/admin"}>
-            Admin
-          </Button>
-        )}
+        <div className="flex items-center gap-4">
+          {user && (
+            <span className="text-sm text-muted-foreground">
+              {user.email}
+            </span>
+          )}
+          {isAdmin && (
+            <Button variant="outline" onClick={() => window.location.href = "/admin"}>
+              Admin
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );
