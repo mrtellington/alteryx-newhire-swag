@@ -188,7 +188,7 @@ const Auth = () => {
                 {loading ? "Checking..." : "Send magic link"}
               </Button>
               <p className="text-xs text-muted-foreground">
-                Only emails ending with @alteryx.com or @whitestonebranding.com are permitted.
+                Only registered emails ending with @alteryx.com are permitted.
               </p>
             </div>
           )}
