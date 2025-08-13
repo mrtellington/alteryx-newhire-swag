@@ -1,21 +1,49 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
+import { useMemo, useState } from "react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { useState } from "react";
+import { getData as getCountryData } from "country-list";
 
-const addressSchema = z.object({
-  line1: z.string().min(3, "Address line 1 is required"),
-  line2: z.string().optional(),
-  city: z.string().min(2, "City is required"),
-  state: z.string().min(2, "State/Region is required"),
-  postal_code: z.string().min(3, "Postal code is required"),
-  country: z.string().min(2, "Country is required"),
-});
+const postalCodePatterns: Record<string, RegExp> = {
+  US: /^\d{5}(-\d{4})?$/,
+  CA: /^[A-Za-z]\d[A-Za-z][ -]?\d[A-Za-z]\d$/,
+  GB: /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i,
+};
+
+const addressSchema = z
+  .object({
+    line1: z.string().min(3, "Address line 1 is required"),
+    line2: z.string().optional(),
+    city: z.string().min(2, "City is required"),
+    region: z.string().min(2, "Region/State is required"),
+    postal_code: z.string().min(2, "Postal code is required"),
+    country: z.string().length(2, "Select a country"), // ISO Alpha-2 code
+  })
+  .superRefine((val, ctx) => {
+    const pattern = postalCodePatterns[val.country];
+    if (pattern && !pattern.test(val.postal_code)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["postal_code"],
+        message:
+          val.country === "US"
+            ? "ZIP must be 12345 or 12345-6789"
+            : val.country === "CA"
+            ? "Use format A1A 1A1"
+            : "Invalid UK postcode format",
+      });
+    }
+    // Basic length check for other countries
+    if (!pattern && val.postal_code.trim().length < 2) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["postal_code"], message: "Postal code too short" });
+    }
+  });
 
 export type AddressValues = z.infer<typeof addressSchema>;
 
@@ -25,17 +53,30 @@ interface ShippingAddressFormProps {
 
 export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormProps) {
   const [submitting, setSubmitting] = useState(false);
+  const countries = useMemo(() => {
+    // [{ code: 'US', name: 'United States' }, ...]
+    return getCountryData().sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
+
   const form = useForm<AddressValues>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
       line1: "",
       line2: "",
       city: "",
-      state: "",
+      region: "",
       postal_code: "",
-      country: "",
+      country: "US",
     },
   });
+
+  const regionLabel = useMemo(() => {
+    const c = form.getValues("country");
+    if (c === "US") return "State";
+    if (c === "CA") return "Province";
+    if (c === "GB") return "County";
+    return "Region/State";
+  }, [form.watch("country")]);
 
   const onSubmit = async (values: AddressValues) => {
     setSubmitting(true);
@@ -112,12 +153,12 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
           />
           <FormField
             control={form.control}
-            name="state"
+            name="region"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>State/Region</FormLabel>
+                <FormLabel>{regionLabel}</FormLabel>
                 <FormControl>
-                  <Input placeholder="State/Region" {...field} />
+                  <Input placeholder={regionLabel} {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -143,9 +184,20 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
           render={({ field }) => (
             <FormItem>
               <FormLabel>Country</FormLabel>
-              <FormControl>
-                <Input placeholder="Country" {...field} />
-              </FormControl>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a country" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {countries.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
