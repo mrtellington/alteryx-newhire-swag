@@ -1,12 +1,22 @@
-import React from 'npm:react@18.3.1'
 import { Webhook } from 'npm:standardwebhooks@1.0.0'
-import { Resend } from 'npm:resend@4.0.0'
-import { renderAsync } from 'npm:@react-email/render@0.0.22'
-import { MagicLinkEmail } from './_templates/magic-link.tsx'
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.39.3'
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
+const resendApiKey = Deno.env.get('RESEND_API_KEY') as string
 const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
+
+// Initialize SMTP client
+const smtpClient = new SMTPClient({
+  connection: {
+    hostname: "smtp.resend.com",
+    port: 587,
+    tls: true,
+    auth: {
+      username: "resend",
+      password: resendApiKey,
+    },
+  },
+});
 
 Deno.serve(async (req) => {
   console.log('Auth email function called - Updated deployment:', {
@@ -76,37 +86,63 @@ Deno.serve(async (req) => {
 
     console.log('User data for email:', { email: user.email, userName, userData });
 
-    const html = await renderAsync(
-      React.createElement(MagicLinkEmail, {
-        supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
-        token,
-        token_hash,
-        redirect_to,
-        email_action_type,
-        user_email: user.email,
-        user_name: userName,
-        user_order: userData?.orders?.[0] || null,
-      })
-    )
+    // Create HTML email content
+    const loginLink = `${redirect_to}#access_token=${token}&token_type=bearer&type=magiclink`;
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Welcome to Alteryx – Redeem Your New Hire Bundle</title>
+        </head>
+        <body style="font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',sans-serif; background-color: #ffffff; margin: 0; padding: 20px;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px 0 48px;">
+            <h1 style="font-size: 24px; letter-spacing: -0.5px; line-height: 1.3; font-weight: 400; color: #484848; margin-bottom: 30px;">
+              Welcome to Alteryx, ${userName}!
+            </h1>
+            <p style="font-size: 16px; line-height: 26px; color: #484848; margin-bottom: 30px;">
+              You're all set to redeem your New Hire Bundle. Click the button below to access your account and place your order.
+            </p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${loginLink}" style="background-color: #007ee6; border-radius: 5px; color: #fff; font-size: 16px; font-weight: bold; text-decoration: none; display: inline-block; padding: 12px 20px;">
+                Access Your Account
+              </a>
+            </div>
+            ${userData?.orders?.[0] ? `
+              <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin: 0 0 10px; color: #484848;">Your Order Details:</h3>
+                <p style="margin: 5px 0; color: #666;">Order Number: ${userData.orders[0].order_number}</p>
+                <p style="margin: 5px 0; color: #666;">Date: ${new Date(userData.orders[0].date_submitted).toLocaleDateString()}</p>
+              </div>
+            ` : ''}
+            <p style="font-size: 14px; line-height: 22px; color: #999; margin-top: 30px;">
+              If you did not request this login, please ignore this email. This link will expire for security purposes.
+            </p>
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            <p style="font-size: 12px; color: #999; text-align: center;">
+              © ${new Date().getFullYear()} Whitestone Branding. All rights reserved.
+            </p>
+          </div>
+        </body>
+      </html>
+    `;
 
-    const { error } = await resend.emails.send({
+    // Send email using SMTP
+    await smtpClient.send({
       from: 'Whitestone <admin@whitestonebranding.com>',
-      to: [user.email],
+      to: user.email,
       subject: 'Welcome to Alteryx – Redeem Your New Hire Bundle',
-      html,
-    })
+      html: html,
+    });
 
-    if (error) {
-      console.error('Resend error:', error)
-      throw error
-    }
+    console.log('Email sent successfully via SMTP to:', user.email);
 
     return new Response(JSON.stringify({ success: true }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     })
   } catch (error) {
-    console.error('Auth email error:', error)
+    console.error('Auth email SMTP error:', error)
     return new Response(
       JSON.stringify({
         error: {
