@@ -35,10 +35,14 @@ export const MagicLinkEmail = ({
   return (
   <Html>
     <Head />
-    <Preview>Welcome to the Alteryx team! Access your New Hire Bundle</Preview>
+    <Preview>Welcome to Alteryx – Redeem Your New Hire Bundle</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Hi {displayName}! Welcome to the Alteryx team!</Heading>
+        <Heading style={h1}>Hi {displayName},</Heading>
+        
+        <Text style={text}>
+          Welcome to the Alteryx team! 🎉
+        </Text>
         
         <Text style={text}>
           Click the secure link below to log in and redeem your New Hire Bundle.
@@ -61,12 +65,12 @@ export const MagicLinkEmail = ({
           We're excited to help you get started in style!
         </Text>
         
-        <Text style={signature}>
-          — The Whitestone Team
+        <Text style={text}>
+          If you have any questions, please feel free to reply to this email.
         </Text>
         
-        <Text style={footer}>
-          If you didn't request this email, you can safely ignore it.
+        <Text style={signature}>
+          — The Whitestone Team
         </Text>
       </Container>
     </Body>

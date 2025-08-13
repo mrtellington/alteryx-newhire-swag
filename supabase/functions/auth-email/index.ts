@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
     const { error } = await resend.emails.send({
       from: 'Whitestone <admin@whitestonebranding.com>',
       to: [user.email],
-      subject: 'Welcome to Alteryx - Access Your New Hire Bundle',
+      subject: 'Welcome to Alteryx – Redeem Your New Hire Bundle',
       html,
     })
 
