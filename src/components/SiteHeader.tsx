@@ -47,8 +47,8 @@ export default function SiteHeader() {
             </Button>
           )}
           {user && (
-            <Button variant="outline" onClick={() => {
-              supabase.auth.signOut();
+            <Button variant="outline" onClick={async () => {
+              await supabase.auth.signOut();
               window.location.href = "/auth";
             }}>
               Logout
