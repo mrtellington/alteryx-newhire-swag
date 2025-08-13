@@ -14,6 +14,7 @@ import * as React from 'npm:react@18.3.1'
 interface OrderConfirmationEmailProps {
   customerName: string
   orderId?: string
+  teeSize?: string
   shippingAddress: string
   isAdminNotification?: boolean
   customerEmail?: string
@@ -22,6 +23,7 @@ interface OrderConfirmationEmailProps {
 export const OrderConfirmationEmail = ({
   customerName,
   orderId,
+  teeSize,
   shippingAddress,
   isAdminNotification = false,
   customerEmail,
@@ -44,6 +46,11 @@ export const OrderConfirmationEmail = ({
                 <strong>Order ID:</strong> {orderId}
               </Text>
             )}
+            {teeSize && (
+              <Text style={text}>
+                <strong>Tee Size:</strong> {teeSize}
+              </Text>
+            )}
             <Text style={text}>
               <strong>Customer:</strong> {customerName} ({customerEmail})
             </Text>
@@ -58,6 +65,11 @@ export const OrderConfirmationEmail = ({
             {orderId && (
               <Text style={text}>
                 <strong>Order ID:</strong> {orderId}
+              </Text>
+            )}
+            {teeSize && (
+              <Text style={text}>
+                <strong>Tee Size:</strong> {teeSize}
               </Text>
             )}
           </>

@@ -125,7 +125,7 @@ export type Database = {
         Returns: undefined
       }
       place_order: {
-        Args: Record<PropertyKey, never>
+        Args: Record<PropertyKey, never> | { tee_size_param?: string }
         Returns: string
       }
     }

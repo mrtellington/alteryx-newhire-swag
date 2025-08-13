@@ -54,10 +54,11 @@ const addressSchema = z
 export type AddressValues = z.infer<typeof addressSchema>;
 
 interface ShippingAddressFormProps {
+  selectedSize?: string | null;
   onSuccess?: (orderId: string) => void;
 }
 
-export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormProps) {
+export default function ShippingAddressForm({ selectedSize, onSuccess }: ShippingAddressFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const countries = useMemo(() => {
     return getCountryData().sort((a, b) => a.name.localeCompare(b.name));
@@ -122,7 +123,7 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
         .eq("id", userId);
       if (updateErr) throw updateErr;
 
-      const { data: orderId, error: rpcErr } = await supabase.rpc("place_order");
+      const { data: orderId, error: rpcErr } = await supabase.rpc("place_order", { tee_size_param: selectedSize });
       if (rpcErr) throw rpcErr;
 
       const orderIdStr = orderId as unknown as string;

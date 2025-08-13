@@ -23,6 +23,7 @@ interface User {
     id: string;
     order_number: string;
     date_submitted: string;
+    tee_size: string | null;
   }>;
 }
 
@@ -79,7 +80,8 @@ export default function Admin() {
           orders (
             id,
             order_number,
-            date_submitted
+            date_submitted,
+            tee_size
           )
         `)
         .order("created_at", { ascending: false });
@@ -237,11 +239,12 @@ export default function Admin() {
 
   const exportUsers = () => {
     const csvContent = [
-      "email,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number",
+      "email,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number,tee_size",
       ...users.map(user => {
         const addr = user.shipping_address || {};
         const orderDate = user.orders?.[0]?.date_submitted || '';
         const orderNumber = user.orders?.[0]?.order_number || '';
+        const teeSize = user.orders?.[0]?.tee_size || '';
         return [
           user.email,
           user.full_name || '',
@@ -252,7 +255,8 @@ export default function Admin() {
           addr.phone || '',
           user.order_submitted,
           orderDate,
-          orderNumber
+          orderNumber,
+          teeSize
         ].join(',');
       })
     ].join('\n');
@@ -414,7 +418,7 @@ export default function Admin() {
                   <TableHead>Address</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Order Status</TableHead>
-                  <TableHead>Order Date & Number</TableHead>
+                  <TableHead>Order Date, Number & Tee Size</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -459,6 +463,11 @@ export default function Admin() {
                                <div key={order.id} className="border-b border-muted pb-1 last:border-b-0 last:pb-0">
                                  <div>{new Date(order.date_submitted).toLocaleDateString()}</div>
                                  <div className="text-muted-foreground">{order.order_number}</div>
+                                 {order.tee_size && (
+                                   <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block">
+                                     Size: {order.tee_size}
+                                   </div>
+                                 )}
                                </div>
                              ))}
                            </div>

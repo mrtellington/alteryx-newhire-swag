@@ -41,10 +41,10 @@ export default function ThankYou() {
         return;
       }
 
-      // Get order information
+      // Get order information with tee size
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
-        .select("*")
+        .select("*, tee_size")
         .eq("user_id", session.user.id)
         .order("date_submitted", { ascending: false })
         .limit(1)
@@ -107,6 +107,12 @@ export default function ThankYou() {
                     {new Date(orderInfo.date_submitted).toLocaleDateString()}
                   </div>
                 </div>
+                {orderInfo.tee_size && (
+                  <div>
+                    <strong>Tee Size:</strong>
+                    <div className="text-muted-foreground">{orderInfo.tee_size}</div>
+                  </div>
+                )}
               </div>
               
               {user?.shipping_address && (

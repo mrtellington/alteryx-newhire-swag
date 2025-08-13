@@ -69,6 +69,21 @@ serve(async (req) => {
 
     if (profErr) throw profErr;
 
+    // Fetch order data including tee size
+    let teeSize = null;
+    if (orderId) {
+      const { data: orderData, error: orderErr } = await supabase
+        .from("orders")
+        .select("tee_size")
+        .eq("id", orderId)
+        .eq("user_id", user.id)
+        .maybeSingle();
+      
+      if (!orderErr && orderData) {
+        teeSize = orderData.tee_size;
+      }
+    }
+
     const fullName = profile?.full_name || userEmail.split("@")[0];
     const shippingHtml = formatAddress(profile?.shipping_address);
 
@@ -81,6 +96,7 @@ serve(async (req) => {
       React.createElement(OrderConfirmationEmail, {
         customerName: fullName,
         orderId,
+        teeSize,
         shippingAddress: shippingHtml,
         isAdminNotification: false,
       })
@@ -90,6 +106,7 @@ serve(async (req) => {
       React.createElement(OrderConfirmationEmail, {
         customerName: fullName,
         orderId,
+        teeSize,
         shippingAddress: shippingHtml,
         isAdminNotification: true,
         customerEmail: userEmail,
