@@ -9,12 +9,26 @@ const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
 
 Deno.serve(async (req) => {
+  console.log('Auth email function called:', {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries())
+  });
+
   if (req.method !== 'POST') {
+    console.log('Method not allowed:', req.method);
     return new Response('not allowed', { status: 400 })
   }
 
   const payload = await req.text()
   const headers = Object.fromEntries(req.headers)
+  
+  console.log('Webhook payload received:', {
+    payloadLength: payload.length,
+    hasSecret: !!hookSecret,
+    contentType: headers['content-type']
+  });
+  
   const wh = new Webhook(hookSecret)
   
   try {
