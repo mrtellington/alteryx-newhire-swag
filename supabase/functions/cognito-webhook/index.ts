@@ -57,11 +57,22 @@ const handler = async (req: Request): Promise<Response> => {
                    formData.Name ||
                    formData['Full Name'];
 
-    // If no full name, try to construct from first/last name
+    // If no full name, try to construct from first/last name or name object
     if (!fullName) {
       const firstName = formData.firstName || formData.FirstName || formData['First Name'];
       const lastName = formData.lastName || formData.LastName || formData['Last Name'];
-      if (firstName && lastName) {
+      
+      // Handle nested name object from Cognito Forms
+      if (formData.Name && typeof formData.Name === 'object') {
+        const nameObj = formData.Name;
+        if (nameObj.FirstAndLast) {
+          fullName = nameObj.FirstAndLast;
+        } else if (nameObj.First && nameObj.Last) {
+          fullName = `${nameObj.First} ${nameObj.Last}`;
+        } else if (nameObj.First) {
+          fullName = nameObj.First;
+        }
+      } else if (firstName && lastName) {
         fullName = `${firstName} ${lastName}`;
       } else if (firstName) {
         fullName = firstName;
