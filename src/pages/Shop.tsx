@@ -34,7 +34,7 @@ export default function Shop() {
     canonical.setAttribute('href', `${window.location.origin}/shop`);
 
     // Auth guard
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!session) {
         navigate("/auth", { replace: true });
       } else {
@@ -43,15 +43,48 @@ export default function Shop() {
           toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
           supabase.auth.signOut();
           navigate("/auth", { replace: true });
+          return;
+        }
+
+        // Check if user has already placed an order
+        try {
+          const { data: userData, error } = await supabase
+            .from("users")
+            .select("order_submitted")
+            .eq("id", session.user.id)
+            .single();
+
+          if (!error && userData?.order_submitted) {
+            navigate("/thank-you", { replace: true });
+          }
+        } catch (error) {
+          console.error("Error checking order status:", error);
         }
       }
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) navigate("/auth", { replace: true });
-      else if (session.user.email && !isAllowedEmail(session.user.email)) {
+
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth", { replace: true });
+      } else if (session.user.email && !isAllowedEmail(session.user.email)) {
         toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
         supabase.auth.signOut();
         navigate("/auth", { replace: true });
+      } else {
+        // Check if user has already placed an order
+        try {
+          const { data: userData, error } = await supabase
+            .from("users")
+            .select("order_submitted")
+            .eq("id", session.user.id)
+            .single();
+
+          if (!error && userData?.order_submitted) {
+            navigate("/thank-you", { replace: true });
+          }
+        } catch (error) {
+          console.error("Error checking order status:", error);
+        }
       }
     });
 
@@ -156,7 +189,7 @@ export default function Shop() {
               <CardDescription>We’ll ship your gift here</CardDescription>
             </CardHeader>
             <CardContent>
-              <ShippingAddressForm onSuccess={() => navigate("/", { replace: true })} />
+              <ShippingAddressForm onSuccess={() => navigate("/thank-you", { replace: true })} />
             </CardContent>
           </Card>
         )}

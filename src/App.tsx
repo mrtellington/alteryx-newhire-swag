@@ -8,6 +8,7 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Shop from "./pages/Shop";
 import Admin from "./pages/Admin";
+import ThankYou from "./pages/ThankYou";
 import SiteHeader from "./components/SiteHeader";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/shop" element={<Shop />} />
+          <Route path="/thank-you" element={<ThankYou />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/" element={<Index />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
