@@ -14,7 +14,83 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      inventory: {
+        Row: {
+          name: string
+          product_id: string
+          quantity_available: number
+          sku: string
+        }
+        Insert: {
+          name: string
+          product_id?: string
+          quantity_available?: number
+          sku: string
+        }
+        Update: {
+          name?: string
+          product_id?: string
+          quantity_available?: number
+          sku?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          date_submitted: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          date_submitted?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          date_submitted?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          created_at: string
+          email: string
+          full_name: string | null
+          id: string
+          invited: boolean
+          order_submitted: boolean
+          shipping_address: Json | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          full_name?: string | null
+          id: string
+          invited?: boolean
+          order_submitted?: boolean
+          shipping_address?: Json | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          full_name?: string | null
+          id?: string
+          invited?: boolean
+          order_submitted?: boolean
+          shipping_address?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
