@@ -203,6 +203,17 @@ const Auth = () => {
           )}
         </CardContent>
       </Card>
+      
+      <footer className="mt-8 text-center">
+        <div className="flex items-center justify-center gap-2 text-white/80 text-sm">
+          <span>A branded experience by</span>
+          <img
+            src="/lovable-uploads/b6850cef-d656-421e-a609-6e101ad734c0.png"
+            alt="Whitestone Branding"
+            className="h-6 w-auto"
+          />
+        </div>
+      </footer>
     </main>
   );
 };
