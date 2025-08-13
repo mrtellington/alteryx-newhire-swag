@@ -1,6 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@4.0.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.55.0";
+import React from 'npm:react@18.3.1';
+import { renderAsync } from 'npm:@react-email/components@0.0.22';
+import { OrderConfirmationEmail } from './_templates/order-confirmation.tsx';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,31 +69,27 @@ serve(async (req) => {
 
     const resend = new Resend(resendKey);
 
-    const siteName = "Whitestone Branding";
     const adminEmail = "admin@whitestonebranding.com";
 
-    const userHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; color: #222;">
-        <h1 style="margin-bottom: 16px;">Order confirmation</h1>
-        <p>Hi ${fullName},</p>
-        <p>Thanks for your order! We'll start preparing your New Hire Bundle right away.</p>
-        ${orderId ? `<p><strong>Order ID:</strong> ${orderId}</p>` : ""}
-        <h3 style="margin-top: 24px;">Shipping Address</h3>
-        <p>${shippingHtml || "Not provided"}</p>
-        <p style="margin-top: 24px;">If anything looks off, just reply to this email and we'll help.</p>
-        <p style="margin-top: 24px;">— ${siteName}</p>
-      </div>
-    `;
+    // Render React Email templates
+    const userHtml = await renderAsync(
+      React.createElement(OrderConfirmationEmail, {
+        customerName: fullName,
+        orderId,
+        shippingAddress: shippingHtml,
+        isAdminNotification: false,
+      })
+    );
 
-    const adminHtml = `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif; color: #222;">
-        <h1 style="margin-bottom: 16px;">New order received</h1>
-        ${orderId ? `<p><strong>Order ID:</strong> ${orderId}</p>` : ""}
-        <p><strong>Customer:</strong> ${fullName} (${userEmail})</p>
-        <h3 style="margin-top: 24px;">Shipping Address</h3>
-        <p>${shippingHtml || "Not provided"}</p>
-      </div>
-    `;
+    const adminHtml = await renderAsync(
+      React.createElement(OrderConfirmationEmail, {
+        customerName: fullName,
+        orderId,
+        shippingAddress: shippingHtml,
+        isAdminNotification: true,
+        customerEmail: userEmail,
+      })
+    );
 
     // Send to customer (bcc admin)
     const userSend = await resend.emails.send({
