@@ -161,12 +161,20 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Call the database function to create the user
+    console.log('About to call create_user_from_webhook with:', {
+      user_email: emailLower,
+      user_full_name: fullName || null,
+      user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null
+    });
+    
     const { data: userId, error: createError } = await supabase
       .rpc('create_user_from_webhook', {
         user_email: emailLower,
         user_full_name: fullName || null,
         user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null
       });
+    
+    console.log('RPC result:', { userId, createError });
 
     if (createError) {
       console.error('Error creating user:', createError);
