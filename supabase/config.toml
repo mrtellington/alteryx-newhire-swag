@@ -8,6 +8,9 @@ enable_confirmations = false
 [auth.email.template.magic_link]
 content_path = "./supabase/functions/auth-email/index.ts"
 
+[auth.email.template.magic_link.env]
+AUTH_EMAIL_HOOK_SECRET = "your-hook-secret-here"
+
 [functions.address-autocomplete]
 verify_jwt = true
 
