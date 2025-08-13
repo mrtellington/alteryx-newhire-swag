@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
-const isAllowedEmail = (email: string) => /@alteryx\.com$/i.test(email.trim());
+const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
 
 const Index = () => {
   const navigate = useNavigate();

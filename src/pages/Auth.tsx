@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
-const isAllowedEmail = (email: string) => /@alteryx\.com$/i.test(email.trim());
+const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
 
 const Auth = () => {
   const navigate = useNavigate();
