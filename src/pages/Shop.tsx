@@ -74,7 +74,7 @@ export default function Shop() {
           <img
             src="/lovable-uploads/208e6bfa-df2a-49ae-8ec6-845390b8b855.png"
             alt="Alteryx Swag Store New Hire logo"
-            className="mx-auto h-10 w-auto"
+            className="mx-auto h-14 w-auto"
             loading="eager"
           />
           <h1 className="text-4xl font-bold">Claim your Alteryx gift</h1>
