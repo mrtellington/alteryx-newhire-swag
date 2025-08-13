@@ -205,13 +205,20 @@ const Auth = () => {
       </Card>
       
       <footer className="mt-8 text-center">
-        <div className="flex items-center justify-center gap-2 text-white/80 text-sm">
-          <span>A branded experience by</span>
-          <img
-            src="/lovable-uploads/b6850cef-d656-421e-a609-6e101ad734c0.png"
-            alt="Whitestone Branding"
-            className="h-6 w-auto"
-          />
+        <div className="text-white/80 text-sm">
+          <div>A branded experience by</div>
+          <a 
+            href="https://whitestonebranding.com" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="inline-block mt-2"
+          >
+            <img
+              src="/lovable-uploads/b6850cef-d656-421e-a609-6e101ad734c0.png"
+              alt="Whitestone Branding"
+              className="h-6 w-auto"
+            />
+          </a>
         </div>
       </footer>
     </main>
