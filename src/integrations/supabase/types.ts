@@ -39,16 +39,19 @@ export type Database = {
         Row: {
           date_submitted: string
           id: string
+          order_number: string | null
           user_id: string
         }
         Insert: {
           date_submitted?: string
           id?: string
+          order_number?: string | null
           user_id: string
         }
         Update: {
           date_submitted?: string
           id?: string
+          order_number?: string | null
           user_id?: string
         }
         Relationships: [
@@ -102,6 +105,10 @@ export type Database = {
           user_full_name: string
           user_shipping_address: Json
         }
+        Returns: string
+      }
+      generate_order_number: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       log_security_event: {
