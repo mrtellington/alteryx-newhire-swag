@@ -42,6 +42,8 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sessi
             supabase.auth.signOut();
             navigate("/auth", { replace: true });
           }, 0);
+        } else {
+          navigate("/shop", { replace: true });
         }
       }
     });
@@ -57,6 +59,8 @@ supabase.auth.getSession().then(({ data: { session } }) => {
           toast({ title: "Unauthorized email", description: "Only @alteryx.com or @whitestonebranding.com are allowed." });
           supabase.auth.signOut();
           navigate("/auth", { replace: true });
+        } else {
+          navigate("/shop", { replace: true });
         }
       }
       setLoading(false);
@@ -84,13 +88,8 @@ supabase.auth.getSession().then(({ data: { session } }) => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Welcome to the Alteryx New Hire Store</h1>
-        <p className="text-lg text-muted-foreground">Signed in as {email}</p>
-        <div className="flex items-center justify-center gap-3">
-          <Button onClick={() => navigate("/shop")}>Go to Store</Button>
-          <Button onClick={handleSignOut} variant="secondary">Sign out</Button>
-        </div>
+      <div className="text-center space-y-2">
+        <h1 className="text-2xl font-semibold">Redirecting to shop...</h1>
       </div>
     </div>
   );

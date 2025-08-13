@@ -34,10 +34,10 @@ const Auth = () => {
 
     // Redirect if already logged in
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session) navigate("/", { replace: true });
+      if (session) navigate("/shop", { replace: true });
     });
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/", { replace: true });
+      if (session) navigate("/shop", { replace: true });
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
@@ -48,7 +48,7 @@ const Auth = () => {
       return;
     }
     setLoading(true);
-    const redirectUrl = `${window.location.origin}/`;
+    const redirectUrl = `${window.location.origin}/shop`;
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: redirectUrl },
