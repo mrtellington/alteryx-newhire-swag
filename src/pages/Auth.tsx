@@ -134,9 +134,18 @@ const Auth = () => {
   return (
     <main className="min-h-screen flex items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Alteryx New Hire Store</CardTitle>
-          <CardDescription>Sign in with a magic link</CardDescription>
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <img
+              src="/lovable-uploads/f10ed5e4-2783-4e68-a9ce-74a7ae05cf67.png"
+              alt="Alteryx New Hire Bundle products including t-shirt, water bottle, and stickers"
+              className="h-32 w-auto object-contain"
+            />
+          </div>
+          <CardTitle>Alteryx New Hire Bundle</CardTitle>
+          <CardDescription>
+            Welcome to the team! To redeem your New Hire Bundle, enter your alteryx.com email, and you will receive a magic link to place your order.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {orderDetails ? (
