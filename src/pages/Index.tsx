@@ -2,6 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
+
+const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
 
 const Index = () => {
   const navigate = useNavigate();
@@ -27,20 +30,34 @@ const Index = () => {
     canonical.setAttribute('href', `${window.location.origin}/`);
 
     // Set up auth listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session) {
         navigate("/auth", { replace: true });
       } else {
-        setEmail(session.user.email ?? null);
+        const userEmail = session.user.email ?? null;
+        setEmail(userEmail);
+        if (userEmail && !isAllowedEmail(userEmail)) {
+          setTimeout(() => {
+            toast({ title: "Unauthorized email", description: "Only @alteryx.com or @whitestonebranding.com are allowed." });
+            supabase.auth.signOut();
+            navigate("/auth", { replace: true });
+          }, 0);
+        }
       }
     });
 
     // Then check existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) {
         navigate("/auth", { replace: true });
       } else {
-        setEmail(session.user.email ?? null);
+        const userEmail = session.user.email ?? null;
+        setEmail(userEmail);
+        if (userEmail && !isAllowedEmail(userEmail)) {
+          toast({ title: "Unauthorized email", description: "Only @alteryx.com or @whitestonebranding.com are allowed." });
+          supabase.auth.signOut();
+          navigate("/auth", { replace: true });
+        }
       }
       setLoading(false);
     });
