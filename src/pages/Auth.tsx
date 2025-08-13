@@ -66,6 +66,8 @@ const Auth = () => {
 
       if (usersError && usersError.code !== "PGRST116") {
         console.error("Error checking user:", usersError);
+        setLoading(false);
+        return;
       }
 
       if (users?.order_submitted) {
@@ -91,10 +93,20 @@ const Auth = () => {
 
         if (ordersError) {
           console.error("Error fetching order:", ordersError);
+          setLoading(false);
+          return;
         } else if (orders) {
           setOrderDetails({
             orderNumber: orders.order_number,
-            dateSubmitted: new Date(orders.date_submitted).toLocaleDateString(),
+            dateSubmitted: new Date(orders.date_submitted).toLocaleDateString("en-US", {
+              weekday: "long",
+              year: "numeric", 
+              month: "numeric",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              timeZoneName: "short"
+            }),
           });
           setLoading(false);
           return;
@@ -102,11 +114,13 @@ const Auth = () => {
       }
     } catch (error) {
       console.error("Error checking order status:", error);
+      setLoading(false);
+      return;
     }
 
     const redirectUrl = `${window.location.origin}/shop`;
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: email.trim().toLowerCase(),
       options: { emailRedirectTo: redirectUrl },
     });
     setLoading(false);
