@@ -452,14 +452,18 @@ export default function Admin() {
                           {user.order_submitted ? "Ordered" : "Pending"}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {order ? (
-                          <div className="text-sm">
-                            {new Date(order.date_submitted).toLocaleDateString()}<br />
-                            <span className="text-muted-foreground">{order.order_number}</span>
-                          </div>
-                        ) : "-"}
-                      </TableCell>
+                       <TableCell>
+                         {user.orders && user.orders.length > 0 ? (
+                           <div className="text-sm space-y-1">
+                             {user.orders.map((order, index) => (
+                               <div key={order.id} className="border-b border-muted pb-1 last:border-b-0 last:pb-0">
+                                 <div>{new Date(order.date_submitted).toLocaleDateString()}</div>
+                                 <div className="text-muted-foreground">{order.order_number}</div>
+                               </div>
+                             ))}
+                           </div>
+                         ) : "-"}
+                       </TableCell>
                       <TableCell>
                         {user.order_submitted && (
                           <Button
