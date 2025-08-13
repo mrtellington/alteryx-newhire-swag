@@ -149,7 +149,7 @@ export default function ThankYou() {
         </Card>
 
         <div className="pt-4">
-          <Button onClick={() => navigate("/")} variant="outline">
+          <Button onClick={() => navigate("/auth")} variant="outline">
             Return to Home
           </Button>
         </div>
