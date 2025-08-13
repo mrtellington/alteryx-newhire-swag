@@ -11,8 +11,20 @@ const Index = () => {
   useEffect(() => {
     // SEO
     document.title = "Alteryx New Hire Store | Home";
-    const meta = document.querySelector('meta[name="description"]');
-    if (meta) meta.setAttribute("content", "Alteryx New Hire Store home page for approved employees");
+    const meta = (document.querySelector('meta[name="description"]') as HTMLMetaElement | null) ?? (() => {
+      const m = document.createElement('meta');
+      m.setAttribute('name', 'description');
+      document.head.appendChild(m);
+      return m as HTMLMetaElement;
+    })();
+    meta.setAttribute("content", "Alteryx New Hire Store home page for approved employees");
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', `${window.location.origin}/`);
 
     // Set up auth listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
