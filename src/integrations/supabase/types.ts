@@ -104,6 +104,10 @@ export type Database = {
         }
         Returns: string
       }
+      log_security_event: {
+        Args: { event_type: string; user_id?: string; metadata?: Json }
+        Returns: undefined
+      }
       place_order: {
         Args: Record<PropertyKey, never>
         Returns: string

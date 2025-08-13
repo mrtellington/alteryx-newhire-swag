@@ -4,6 +4,9 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
 };
 
 function normalizeAddress(components: Array<{ long_name: string; short_name: string; types: string[] }>) {
@@ -31,6 +34,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  console.log(`Address autocomplete request: ${req.method} from ${req.headers.get('origin') || 'unknown'}`);
 
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   if (!apiKey) {

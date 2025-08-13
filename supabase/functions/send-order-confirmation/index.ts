@@ -8,6 +8,9 @@ import { OrderConfirmationEmail } from './_templates/order-confirmation.tsx';
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "X-Content-Type-Options": "nosniff",
+  "X-Frame-Options": "DENY",
+  "X-XSS-Protection": "1; mode=block",
 };
 
 interface SendOrderBody {
@@ -29,6 +32,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  console.log(`Order confirmation request: ${req.method} for user ${req.headers.get('authorization') ? 'authenticated' : 'anonymous'}`);
 
   try {
     const resendKey = Deno.env.get("RESEND_API_KEY");
