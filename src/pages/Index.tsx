@@ -88,6 +88,7 @@ supabase.auth.getSession().then(({ data: { session } }) => {
         <h1 className="text-4xl font-bold">Welcome to the Alteryx New Hire Store</h1>
         <p className="text-lg text-muted-foreground">Signed in as {email}</p>
         <div className="flex items-center justify-center gap-3">
+          <Button onClick={() => navigate("/shop")}>Go to Store</Button>
           <Button onClick={handleSignOut} variant="secondary">Sign out</Button>
         </div>
       </div>
