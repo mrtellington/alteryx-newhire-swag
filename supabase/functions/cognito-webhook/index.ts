@@ -38,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Webhook received from Cognito Forms');
+    console.log('Webhook received from Cognito Forms - Updated deployment');
     
     const formData: CognitoFormData = await req.json();
     console.log('Form data received:', JSON.stringify(formData, null, 2));
