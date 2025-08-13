@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { getData as getCountryData } from "country-list";
+import AddressAutocomplete, { NormalizedAddress } from "@/components/AddressAutocomplete";
 
 const postalCodePatterns: Record<string, RegExp> = {
   US: /^\d{5}(-\d{4})?$/,
@@ -39,7 +40,6 @@ const addressSchema = z
             : "Invalid UK postcode format",
       });
     }
-    // Basic length check for other countries
     if (!pattern && val.postal_code.trim().length < 2) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["postal_code"], message: "Postal code too short" });
     }
@@ -54,7 +54,6 @@ interface ShippingAddressFormProps {
 export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const countries = useMemo(() => {
-    // [{ code: 'US', name: 'United States' }, ...]
     return getCountryData().sort((a, b) => a.name.localeCompare(b.name));
   }, []);
 
@@ -77,6 +76,16 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
     if (c === "GB") return "County";
     return "Region/State";
   }, [form.watch("country")]);
+
+  const applyAutocomplete = (addr: NormalizedAddress) => {
+    form.setValue("line1", addr.line1 || "");
+    form.setValue("line2", addr.line2 || "");
+    form.setValue("city", addr.city || "");
+    form.setValue("region", addr.region || "");
+    form.setValue("postal_code", addr.postal_code || "");
+    if (addr.country) form.setValue("country", addr.country);
+    form.clearErrors();
+  };
 
   const onSubmit = async (values: AddressValues) => {
     setSubmitting(true);
@@ -110,6 +119,11 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-2">
+          <FormLabel>Search address</FormLabel>
+          <AddressAutocomplete onSelect={applyAutocomplete} />
+          <FormDescription>You can still edit any field below after selecting.</FormDescription>
+        </div>
         <FormField
           control={form.control}
           name="line1"
