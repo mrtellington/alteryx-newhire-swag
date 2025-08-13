@@ -18,6 +18,9 @@ interface MagicLinkEmailProps {
   redirect_to: string
   token_hash: string
   token: string
+  user_email?: string
+  user_name?: string
+  user_order?: any
 }
 
 export const MagicLinkEmail = ({
@@ -25,13 +28,17 @@ export const MagicLinkEmail = ({
   supabase_url,
   email_action_type,
   redirect_to,
-}: MagicLinkEmailProps) => (
+  user_name,
+}: MagicLinkEmailProps) => {
+  const displayName = user_name || 'there';
+  
+  return (
   <Html>
     <Head />
     <Preview>Welcome to the Alteryx team! Access your New Hire Bundle</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Welcome to the Alteryx team!</Heading>
+        <Heading style={h1}>Hi {displayName}! Welcome to the Alteryx team!</Heading>
         
         <Text style={text}>
           Click the secure link below to log in and redeem your New Hire Bundle.
@@ -64,7 +71,8 @@ export const MagicLinkEmail = ({
       </Container>
     </Body>
   </Html>
-)
+  );
+};
 
 export default MagicLinkEmail
 

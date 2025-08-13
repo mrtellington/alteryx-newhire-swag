@@ -19,6 +19,8 @@ const postalCodePatterns: Record<string, RegExp> = {
 
 const addressSchema = z
   .object({
+    first_name: z.string().min(1, "First name is required"),
+    last_name: z.string().min(1, "Last name is required"),
     line1: z.string().min(3, "Address line 1 is required"),
     line2: z.string().optional(),
     city: z.string().min(2, "City is required"),
@@ -64,6 +66,8 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
   const form = useForm<AddressValues>({
     resolver: zodResolver(addressSchema),
     defaultValues: {
+      first_name: "",
+      last_name: "",
       line1: "",
       line2: "",
       city: "",
@@ -103,7 +107,12 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
 
       const { error: updateErr } = await supabase
         .from("users")
-        .update({ shipping_address: values })
+        .update({ 
+          shipping_address: values,
+          first_name: values.first_name,
+          last_name: values.last_name,
+          full_name: `${values.first_name} ${values.last_name}`
+        })
         .eq("id", userId);
       if (updateErr) throw updateErr;
 
@@ -131,6 +140,34 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="first_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>First Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="First name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="last_name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Last Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Last name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
         <div className="space-y-2">
           <FormLabel>Search address</FormLabel>
           <AddressAutocomplete onSelect={applyAutocomplete} />

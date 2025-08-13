@@ -14,6 +14,8 @@ interface User {
   id: string;
   email: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   shipping_address: any;
   order_submitted: boolean;
   created_at: string;
@@ -30,7 +32,8 @@ export default function Admin() {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     email: "",
-    full_name: "",
+    first_name: "",
+    last_name: "",
     address: "",
     city: "",
     state: "",
@@ -115,7 +118,9 @@ export default function Admin() {
       const { error } = await supabase.functions.invoke("cognito-webhook", {
         body: {
           email: newUser.email,
-          full_name: newUser.full_name,
+          full_name: `${newUser.first_name} ${newUser.last_name}`,
+          first_name: newUser.first_name,
+          last_name: newUser.last_name,
           shipping_address: shippingAddress
         }
       });
@@ -130,7 +135,8 @@ export default function Admin() {
       setIsAddUserOpen(false);
       setNewUser({
         email: "",
-        full_name: "",
+        first_name: "",
+        last_name: "",
         address: "",
         city: "",
         state: "",
@@ -203,7 +209,9 @@ export default function Admin() {
           await supabase.functions.invoke("cognito-webhook", {
             body: {
               email: user.email,
-              full_name: user.full_name || user.name || '',
+              full_name: `${user.first_name || user.name || ''} ${user.last_name || ''}`.trim() || user.name || '',
+              first_name: user.first_name || user.name || '',
+              last_name: user.last_name || '',
               shipping_address: shippingAddress
             }
           });
@@ -299,13 +307,23 @@ export default function Admin() {
                     placeholder="user@alteryx.com"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="full_name">Full Name</Label>
-                  <Input
-                    id="full_name"
-                    value={newUser.full_name}
-                    onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
-                  />
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label htmlFor="first_name">First Name</Label>
+                    <Input
+                      id="first_name"
+                      value={newUser.first_name}
+                      onChange={(e) => setNewUser({ ...newUser, first_name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="last_name">Last Name</Label>
+                    <Input
+                      id="last_name"
+                      value={newUser.last_name}
+                      onChange={(e) => setNewUser({ ...newUser, last_name: e.target.value })}
+                    />
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="address">Address</Label>
@@ -377,7 +395,7 @@ export default function Admin() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            Expected columns: email, full_name, address, city, state, zip, phone
+            Expected columns: email, first_name, last_name, address, city, state, zip, phone
           </p>
         </CardContent>
       </Card>
@@ -392,7 +410,7 @@ export default function Admin() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Email</TableHead>
-                  <TableHead>Full Name</TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Order Status</TableHead>
@@ -408,7 +426,11 @@ export default function Admin() {
                   return (
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.email}</TableCell>
-                      <TableCell>{user.full_name || "-"}</TableCell>
+                      <TableCell>
+                        {user.first_name && user.last_name 
+                          ? `${user.first_name} ${user.last_name}` 
+                          : user.full_name || "-"}
+                      </TableCell>
                       <TableCell>
                         {addr.line1 || addr.address ? (
                           <div className="text-sm">

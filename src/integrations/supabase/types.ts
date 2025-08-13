@@ -68,27 +68,33 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          first_name: string | null
           full_name: string | null
           id: string
           invited: boolean
+          last_name: string | null
           order_submitted: boolean
           shipping_address: Json | null
         }
         Insert: {
           created_at?: string
           email: string
+          first_name?: string | null
           full_name?: string | null
           id: string
           invited?: boolean
+          last_name?: string | null
           order_submitted?: boolean
           shipping_address?: Json | null
         }
         Update: {
           created_at?: string
           email?: string
+          first_name?: string | null
           full_name?: string | null
           id?: string
           invited?: boolean
+          last_name?: string | null
           order_submitted?: boolean
           shipping_address?: Json | null
         }

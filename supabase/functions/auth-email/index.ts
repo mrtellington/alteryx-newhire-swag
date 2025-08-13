@@ -3,6 +3,7 @@ import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 import { Resend } from 'npm:resend@4.0.0'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import { MagicLinkEmail } from './_templates/magic-link.tsx'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
@@ -38,6 +39,29 @@ Deno.serve(async (req) => {
       return new Response('Email type not handled', { status: 200 })
     }
 
+    // Initialize Supabase client to fetch user data
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Get user details including name
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('email, first_name, last_name, full_name, order_submitted, orders(order_number, date_submitted)')
+      .eq('email', user.email)
+      .single();
+
+    let userName = '';
+    if (userData) {
+      if (userData.first_name && userData.last_name) {
+        userName = `${userData.first_name} ${userData.last_name}`;
+      } else if (userData.full_name) {
+        userName = userData.full_name;
+      }
+    }
+
+    console.log('User data for email:', { email: user.email, userName, userData });
+
     const html = await renderAsync(
       React.createElement(MagicLinkEmail, {
         supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
@@ -45,6 +69,9 @@ Deno.serve(async (req) => {
         token_hash,
         redirect_to,
         email_action_type,
+        user_email: user.email,
+        user_name: userName,
+        user_order: userData?.orders?.[0] || null,
       })
     )
 
