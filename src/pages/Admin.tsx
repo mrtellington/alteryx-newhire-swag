@@ -418,7 +418,7 @@ export default function Admin() {
                   <TableHead>Address</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Order Status</TableHead>
-                  <TableHead>Order Date, Number & Tee Size</TableHead>
+                  <TableHead>Order Info</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
