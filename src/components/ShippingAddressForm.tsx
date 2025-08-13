@@ -234,7 +234,7 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
             </FormItem>
           )}
         />
-        <Button type="submit" disabled={submitting} className="w-full">
+        <Button type="submit" variant="brand" disabled={submitting} className="w-full">
           {submitting ? "Submitting..." : "Confirm and Claim"}
         </Button>
       </form>

@@ -12,6 +12,8 @@ const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.
 export default function Shop() {
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const sizes = useMemo(() => ["XS","S","M","L","XL","2XL","3XL","4XL"], []);
 
   useEffect(() => {
     // SEO
@@ -68,37 +70,79 @@ export default function Shop() {
   return (
     <main className="min-h-screen bg-background px-4 py-10">
       <div className="max-w-2xl mx-auto space-y-6">
-        <header className="text-center space-y-2">
+        <header className="text-center space-y-4">
+          <img
+            src="/lovable-uploads/208e6bfa-df2a-49ae-8ec6-845390b8b855.png"
+            alt="Alteryx Swag Store New Hire logo"
+            className="mx-auto h-10 w-auto"
+            loading="eager"
+          />
           <h1 className="text-4xl font-bold">Claim your Alteryx gift</h1>
           <p className="text-muted-foreground">One per person, while supplies last.</p>
         </header>
 
         <Card>
           <CardHeader>
-            <CardTitle>Featured Item</CardTitle>
-            <CardDescription>Limited inventory available</CardDescription>
+            <CardTitle>New Hire Bundle</CardTitle>
+            <CardDescription>
+              <span className="sr-only">Bundle description</span>
+              <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                <li>This Bundle Includes:</li>
+                <li>Tote</li>
+                <li>Hat</li>
+                <li>Sticker</li>
+                <li>Water Bottle</li>
+                <li>Alteryx Tee</li>
+              </ul>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {inventoryQuery.isLoading && <p>Loading inventory...</p>}
             {inventoryQuery.isError && (
               <p className="text-destructive">Unable to load inventory.</p>
             )}
-            {inventoryQuery.data ? (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <img
+                  src="/lovable-uploads/47a14703-bd92-4198-9842-accafdefed92.png"
+                  alt="Alteryx New Hire Bundle contents: tote, hat, sticker, water bottle, tee"
+                  className="w-full rounded-md border object-cover"
+                  loading="lazy"
+                />
+                <div className="space-y-4">
                   <div>
-                    <p className="font-medium">{inventoryQuery.data.name}</p>
-                    <p className="text-sm text-muted-foreground">SKU: {inventoryQuery.data.sku}</p>
+                    <p className="font-medium">Choose your tee size</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {sizes.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          className={
+                            `px-3 py-1.5 rounded-full border text-sm hover-scale ` +
+                            (selectedSize === s
+                              ? "bg-[hsl(var(--deep))] text-white border-transparent"
+                              : "bg-transparent text-[hsl(var(--deep))] border-[hsl(var(--deep))]")
+                          }
+                          onClick={() => setSelectedSize(s)}
+                          aria-pressed={selectedSize === s}
+                          aria-label={`Select size ${s}`}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-sm">Available: {inventoryQuery.data.quantity_available}</p>
+
+                  <Button
+                    variant="brand"
+                    onClick={() => selectedSize ? setShowForm(true) : toast({ title: "Select a size", description: "Please choose a tee size to continue." })}
+                    disabled={!selectedSize || (!!inventoryQuery.data && inventoryQuery.data.quantity_available <= 0)}
+                  >
+                    {inventoryQuery.data && inventoryQuery.data.quantity_available <= 0 ? "Out of stock" : "Claim your bundle"}
+                  </Button>
                 </div>
-                <Button onClick={() => setShowForm(true)} disabled={inventoryQuery.data.quantity_available <= 0}>
-                  {inventoryQuery.data.quantity_available > 0 ? "Claim your item" : "Out of stock"}
-                </Button>
               </div>
-            ) : (
-              !inventoryQuery.isLoading && <p>No inventory configured yet.</p>
-            )}
+            </div>
           </CardContent>
         </Card>
 
