@@ -229,20 +229,22 @@ export default function Admin() {
 
   const exportUsers = () => {
     const csvContent = [
-      "email,full_name,address,city,state,zip,phone,order_submitted,order_date",
+      "email,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number",
       ...users.map(user => {
         const addr = user.shipping_address || {};
         const orderDate = user.orders?.[0]?.date_submitted || '';
+        const orderNumber = user.orders?.[0]?.order_number || '';
         return [
           user.email,
           user.full_name || '',
-          addr.address || '',
+          addr.line1 || addr.address || '',
           addr.city || '',
-          addr.state || '',
-          addr.zip || '',
+          addr.region || addr.state || '',
+          addr.postal_code || addr.zip || '',
           addr.phone || '',
           user.order_submitted,
-          orderDate
+          orderDate,
+          orderNumber
         ].join(',');
       })
     ].join('\n');
@@ -394,7 +396,7 @@ export default function Admin() {
                   <TableHead>Address</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Order Status</TableHead>
-                  <TableHead>Order Date</TableHead>
+                  <TableHead>Order Date & Number</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -408,10 +410,11 @@ export default function Admin() {
                       <TableCell className="font-medium">{user.email}</TableCell>
                       <TableCell>{user.full_name || "-"}</TableCell>
                       <TableCell>
-                        {addr.address ? (
+                        {addr.line1 || addr.address ? (
                           <div className="text-sm">
-                            {addr.address}<br />
-                            {addr.city}, {addr.state} {addr.zip}
+                            {addr.line1 || addr.address}<br />
+                            {addr.line2 && <>{addr.line2}<br /></>}
+                            {addr.city}, {addr.region || addr.state} {addr.postal_code || addr.zip}
                           </div>
                         ) : "-"}
                       </TableCell>
@@ -428,7 +431,12 @@ export default function Admin() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {order ? new Date(order.date_submitted).toLocaleDateString() : "-"}
+                        {order ? (
+                          <div className="text-sm">
+                            {new Date(order.date_submitted).toLocaleDateString()}<br />
+                            <span className="text-muted-foreground">{order.order_number}</span>
+                          </div>
+                        ) : "-"}
                       </TableCell>
                       <TableCell>
                         {user.order_submitted && (
