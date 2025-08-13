@@ -8,13 +8,6 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
 
-// Log the hook secret format for debugging
-console.log('Hook secret info:', {
-  exists: !!hookSecret,
-  length: hookSecret?.length,
-  startsWithWhsk: hookSecret?.startsWith('whsk_')
-})
-
 Deno.serve(async (req) => {
   console.log('Auth email function called:', {
     method: req.method,
