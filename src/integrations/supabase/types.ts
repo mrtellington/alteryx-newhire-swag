@@ -40,18 +40,21 @@ export type Database = {
           date_submitted: string
           id: string
           order_number: string | null
+          tee_size: string | null
           user_id: string
         }
         Insert: {
           date_submitted?: string
           id?: string
           order_number?: string | null
+          tee_size?: string | null
           user_id: string
         }
         Update: {
           date_submitted?: string
           id?: string
           order_number?: string | null
+          tee_size?: string | null
           user_id?: string
         }
         Relationships: [
