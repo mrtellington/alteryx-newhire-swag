@@ -46,6 +46,11 @@ export default function SiteHeader() {
               Admin
             </Button>
           )}
+          {user && (
+            <Button variant="outline" onClick={() => supabase.auth.signOut()}>
+              Logout
+            </Button>
+          )}
         </div>
       </div>
     </header>
