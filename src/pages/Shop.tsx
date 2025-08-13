@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import ShippingAddressForm from "@/components/ShippingAddressForm";
 import { toast } from "@/components/ui/use-toast";
 
-const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
+const isAllowedEmail = (email: string) => /@alteryx\.com$/i.test(email.trim());
 
 export default function Shop() {
   const navigate = useNavigate();
@@ -40,7 +40,7 @@ export default function Shop() {
       } else {
         const email = session.user.email ?? '';
         if (!isAllowedEmail(email)) {
-          toast({ title: "Unauthorized email", description: "Only @alteryx.com or @whitestonebranding.com are allowed." });
+          toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
           supabase.auth.signOut();
           navigate("/auth", { replace: true });
         }
@@ -49,7 +49,7 @@ export default function Shop() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) navigate("/auth", { replace: true });
       else if (session.user.email && !isAllowedEmail(session.user.email)) {
-        toast({ title: "Unauthorized email", description: "Only @alteryx.com or @whitestonebranding.com are allowed." });
+        toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
         supabase.auth.signOut();
         navigate("/auth", { replace: true });
       }
@@ -70,14 +70,6 @@ export default function Shop() {
   return (
     <main className="min-h-screen bg-background px-4 py-10">
       <div className="max-w-6xl mx-auto space-y-8">
-        <header className="text-center">
-          <img
-            src="/lovable-uploads/208e6bfa-df2a-49ae-8ec6-845390b8b855.png"
-            alt="Alteryx Swag Store New Hire logo"
-            className="mx-auto h-16 w-auto"
-            loading="eager"
-          />
-        </header>
 
         <Card className="border-0 shadow-none">
           <CardHeader className="sr-only">

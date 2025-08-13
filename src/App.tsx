@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Shop from "./pages/Shop";
+import SiteHeader from "./components/SiteHeader";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -15,6 +17,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <SiteHeader />
         <Routes>
           <Route path="/auth" element={<Auth />} />
           <Route path="/shop" element={<Shop />} />

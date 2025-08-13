@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
-const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
+const isAllowedEmail = (email: string) => /@alteryx\.com$/i.test(email.trim());
 
 const Index = () => {
   const navigate = useNavigate();
@@ -38,7 +38,7 @@ const { data: { subscription } } = supabase.auth.onAuthStateChange((event, sessi
         setEmail(userEmail);
         if (userEmail && !isAllowedEmail(userEmail)) {
           setTimeout(() => {
-            toast({ title: "Unauthorized email", description: "Only @alteryx.com or @whitestonebranding.com are allowed." });
+            toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
             supabase.auth.signOut();
             navigate("/auth", { replace: true });
           }, 0);
@@ -56,7 +56,7 @@ supabase.auth.getSession().then(({ data: { session } }) => {
         const userEmail = session.user.email ?? null;
         setEmail(userEmail);
         if (userEmail && !isAllowedEmail(userEmail)) {
-          toast({ title: "Unauthorized email", description: "Only @alteryx.com or @whitestonebranding.com are allowed." });
+          toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
           supabase.auth.signOut();
           navigate("/auth", { replace: true });
         } else {

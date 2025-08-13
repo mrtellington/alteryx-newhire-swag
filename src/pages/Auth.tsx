@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 
-const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
+const isAllowedEmail = (email: string) => /@alteryx\.com$/i.test(email.trim());
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -44,7 +44,7 @@ const Auth = () => {
 
   const handleMagicLink = async () => {
     if (!isAllowedEmail(email)) {
-      toast({ title: "Invalid email domain", description: "Use @alteryx.com or @whitestonebranding.com" });
+      toast({ title: "Invalid email domain", description: "Use @alteryx.com" });
       return;
     }
     setLoading(true);
@@ -74,10 +74,10 @@ const Auth = () => {
               <Label htmlFor="email">Company Email</Label>
               <Input id="email" type="email" placeholder="you@alteryx.com" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
-            <Button className="w-full" onClick={handleMagicLink} disabled={loading}>
+            <Button className="w-full" variant="brand" onClick={handleMagicLink} disabled={loading}>
               {loading ? "Sending..." : "Send magic link"}
             </Button>
-            <p className="text-xs text-muted-foreground">Only @alteryx.com and @whitestonebranding.com emails are allowed.</p>
+            <p className="text-xs text-muted-foreground">Only emails ending with @alteryx.com are permitted.</p>
           </div>
         </CardContent>
       </Card>
