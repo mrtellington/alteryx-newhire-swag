@@ -69,6 +69,7 @@ export type Database = {
       }
       users: {
         Row: {
+          auth_user_id: string | null
           created_at: string
           email: string
           first_name: string | null
@@ -80,6 +81,7 @@ export type Database = {
           shipping_address: Json | null
         }
         Insert: {
+          auth_user_id?: string | null
           created_at?: string
           email: string
           first_name?: string | null
@@ -91,6 +93,7 @@ export type Database = {
           shipping_address?: Json | null
         }
         Update: {
+          auth_user_id?: string | null
           created_at?: string
           email?: string
           first_name?: string | null
@@ -109,11 +112,18 @@ export type Database = {
     }
     Functions: {
       create_user_from_webhook: {
-        Args: {
-          user_email: string
-          user_full_name?: string
-          user_shipping_address?: Json
-        }
+        Args:
+          | {
+              user_email: string
+              user_full_name?: string
+              user_shipping_address?: Json
+            }
+          | {
+              user_email: string
+              user_full_name?: string
+              user_shipping_address?: Json
+              auth_user_id?: string
+            }
         Returns: Json
       }
       generate_order_number: {

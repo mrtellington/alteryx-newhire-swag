@@ -112,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
-      .select('id, email, invited')
+      .select('id, email, invited, auth_user_id')
       .eq('email', emailLower)
       .single();
 
@@ -130,15 +130,54 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    let authUserId = null;
+
+    // Create Supabase Auth user if one doesn't exist or if existing user has no auth_user_id
+    if (!existingUser || !existingUser.auth_user_id) {
+      console.log(`Creating Supabase Auth user for: ${emailLower}`);
+      
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: emailLower,
+        email_confirm: true, // Auto-confirm the email
+        user_metadata: {
+          full_name: fullName,
+          invited_via: 'cognito_forms'
+        }
+      });
+
+      if (authError) {
+        console.error('Error creating Supabase Auth user:', authError);
+        // Continue without auth user - they can still be in the users table
+        console.log('Continuing without auth user creation');
+      } else {
+        authUserId = authData.user?.id;
+        console.log(`Supabase Auth user created with ID: ${authUserId}`);
+      }
+    }
+
     if (existingUser) {
       console.log(`User already exists: ${emailLower}`);
+      
+      // If we just created an auth user, update the existing record
+      if (authUserId) {
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ auth_user_id: authUserId })
+          .eq('id', existingUser.id);
+          
+        if (updateError) {
+          console.error('Error updating user with auth_user_id:', updateError);
+        }
+      }
+      
       return new Response(
         JSON.stringify({ 
           success: true,
-          message: 'User already exists in the system',
+          message: authUserId ? 'User updated with auth capabilities' : 'User already exists in the system',
           user: {
             email: existingUser.email,
-            invited: existingUser.invited
+            invited: existingUser.invited,
+            canLogin: Boolean(authUserId || existingUser.auth_user_id)
           }
         }),
         { 
@@ -175,14 +214,16 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('About to call create_user_from_webhook with:', {
       user_email: emailLower,
       user_full_name: fullName || null,
-      user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null
+      user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
+      auth_user_id: authUserId
     });
     
     const { data: result, error: rpcError } = await supabase
       .rpc('create_user_from_webhook', {
         user_email: emailLower,
         user_full_name: fullName || null,
-        user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null
+        user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
+        auth_user_id: authUserId
       });
     
     console.log('RPC result:', result);
@@ -241,7 +282,8 @@ const handler = async (req: Request): Promise<Response> => {
           id: result.userId,
           email: emailLower,
           fullName: fullName,
-          invited: true
+          invited: true,
+          canLogin: Boolean(authUserId)
         }
       }),
       { 
