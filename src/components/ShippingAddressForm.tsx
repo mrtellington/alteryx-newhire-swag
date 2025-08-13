@@ -96,6 +96,8 @@ export default function ShippingAddressForm({ onSuccess }: ShippingAddressFormPr
     if (addr.country) {
       console.log("Setting country to:", addr.country);
       form.setValue("country", addr.country);
+      // Force form to re-validate with new country
+      form.trigger("postal_code");
     }
     form.clearErrors();
   };
