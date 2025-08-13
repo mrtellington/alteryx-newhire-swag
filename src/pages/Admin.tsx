@@ -459,17 +459,23 @@ export default function Admin() {
                        <TableCell>
                          {user.orders && user.orders.length > 0 ? (
                            <div className="text-sm space-y-1">
-                             {user.orders.map((order, index) => (
-                               <div key={order.id} className="border-b border-muted pb-1 last:border-b-0 last:pb-0">
-                                 <div>{new Date(order.date_submitted).toLocaleDateString()}</div>
-                                 <div className="text-muted-foreground">{order.order_number}</div>
-                                 {order.tee_size && (
-                                   <div className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block">
-                                     Size: {order.tee_size}
-                                   </div>
-                                 )}
-                               </div>
-                             ))}
+                              {user.orders.map((order, index) => (
+                                <div key={order.id} className="border-b border-muted pb-1 last:border-b-0 last:pb-0">
+                                  <div>{new Date(order.date_submitted).toLocaleDateString()}</div>
+                                  <div className="text-muted-foreground">{order.order_number}</div>
+                                  <div className="mt-1">
+                                    {order.tee_size ? (
+                                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block font-medium">
+                                        Size: {order.tee_size}
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded inline-block">
+                                        No size recorded
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
                            </div>
                          ) : "-"}
                        </TableCell>
