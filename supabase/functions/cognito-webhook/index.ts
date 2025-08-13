@@ -167,35 +167,21 @@ const handler = async (req: Request): Promise<Response> => {
       user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null
     });
     
-    const { data: userId, error: createError } = await supabase
+    const { data: result, error: rpcError } = await supabase
       .rpc('create_user_from_webhook', {
         user_email: emailLower,
         user_full_name: fullName || null,
         user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null
       });
     
-    console.log('RPC result:', { userId, createError });
+    console.log('RPC result:', result);
 
-    if (createError) {
-      console.error('Error creating user:', createError);
-      
-      if (createError.message.includes('already exists')) {
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            message: 'User already exists in the system'
-          }),
-          { 
-            status: 200, 
-            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-          }
-        );
-      }
-
+    if (rpcError) {
+      console.error('RPC error:', rpcError);
       return new Response(
         JSON.stringify({ 
-          error: 'Failed to create user',
-          message: createError.message
+          error: 'Database RPC error',
+          message: rpcError.message
         }),
         { 
           status: 500, 
@@ -204,21 +190,51 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`User created successfully: ${emailLower}, ID: ${userId}`);
+    // Handle the JSONB response from the function
+    if (result?.createError) {
+      console.error('Error creating user:', result.createError);
+      
+      if (result.createError.code === 'INVALID_DOMAIN') {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid email domain',
+            message: result.createError.message
+          }),
+          { 
+            status: 400, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to create user',
+          message: result.createError.message,
+          details: result.createError
+        }),
+        { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    console.log(`User processed successfully: ${emailLower}, ID: ${result.userId}, Message: ${result.message}`);
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: 'User created successfully',
+        message: result.message || 'User processed successfully',
         user: {
-          id: userId,
+          id: result.userId,
           email: emailLower,
           fullName: fullName,
           invited: true
         }
       }),
       { 
-        status: 201, 
+        status: result.message?.includes('updated') ? 200 : 201, 
         headers: { 'Content-Type': 'application/json', ...corsHeaders } 
       }
     );

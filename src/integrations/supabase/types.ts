@@ -111,10 +111,10 @@ export type Database = {
       create_user_from_webhook: {
         Args: {
           user_email: string
-          user_full_name: string
-          user_shipping_address: Json
+          user_full_name?: string
+          user_shipping_address?: Json
         }
-        Returns: string
+        Returns: Json
       }
       generate_order_number: {
         Args: Record<PropertyKey, never>
