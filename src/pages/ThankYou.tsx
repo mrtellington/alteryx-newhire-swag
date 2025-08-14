@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,10 +10,14 @@ export default function ThankYou() {
   const [orderInfo, setOrderInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    checkUserAndOrder();
-  }, []);
+    // Only run the check if we're actually on the thank-you page
+    if (location.pathname === '/thank-you') {
+      checkUserAndOrder();
+    }
+  }, [location.pathname]);
 
   const checkUserAndOrder = async () => {
     try {
