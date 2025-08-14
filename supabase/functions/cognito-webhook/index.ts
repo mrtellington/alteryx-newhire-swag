@@ -270,6 +270,8 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('About to call create_user_from_webhook with:', {
       user_email: emailLower,
       user_full_name: fullName || null,
+      user_first_name: firstName || null,
+      user_last_name: lastName || null,
       user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
       auth_user_id: authUserId
     });
@@ -278,6 +280,8 @@ const handler = async (req: Request): Promise<Response> => {
       .rpc('create_user_from_webhook', {
         user_email: emailLower,
         user_full_name: fullName || null,
+        user_first_name: firstName || null,
+        user_last_name: lastName || null,
         user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
         auth_user_id: authUserId
       });

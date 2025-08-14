@@ -176,6 +176,14 @@ export type Database = {
           | {
               user_email: string
               user_full_name?: string
+              user_first_name?: string
+              user_last_name?: string
+              user_shipping_address?: Json
+              auth_user_id?: string
+            }
+          | {
+              user_email: string
+              user_full_name?: string
               user_shipping_address?: Json
             }
           | {
