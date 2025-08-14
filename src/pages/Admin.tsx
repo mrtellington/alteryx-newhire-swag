@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, RotateCcw, Download, Search } from "lucide-react";
+import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown } from "lucide-react";
 import AdminManagement from "@/components/AdminManagement";
 
 interface User {
@@ -33,6 +33,8 @@ export default function Admin() {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [sortField, setSortField] = useState<keyof User | 'name' | 'orderDate' | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({
     email: "",
@@ -80,13 +82,57 @@ export default function Admin() {
     fetchUsers();
   }, []);
 
+  // Sort function
+  const sortUsers = (field: keyof User | 'name' | 'orderDate') => {
+    const direction = sortField === field && sortDirection === 'asc' ? 'desc' : 'asc';
+    setSortField(field);
+    setSortDirection(direction);
+    
+    const sorted = [...filteredUsers].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+      
+      switch (field) {
+        case 'name':
+          aValue = getDisplayName(a).toLowerCase();
+          bValue = getDisplayName(b).toLowerCase();
+          break;
+        case 'orderDate':
+          aValue = a.orders?.[0]?.date_submitted || '';
+          bValue = b.orders?.[0]?.date_submitted || '';
+          break;
+        case 'email':
+          aValue = a.email.toLowerCase();
+          bValue = b.email.toLowerCase();
+          break;
+        case 'order_submitted':
+          aValue = a.order_submitted ? 1 : 0;
+          bValue = b.order_submitted ? 1 : 0;
+          break;
+        case 'created_at':
+          aValue = a.created_at;
+          bValue = b.created_at;
+          break;
+        default:
+          aValue = a[field];
+          bValue = b[field];
+      }
+      
+      if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    
+    setFilteredUsers(sorted);
+  };
+
   // Filter users based on search query
   useEffect(() => {
-    if (!searchQuery) {
-      setFilteredUsers(users);
-    } else {
+    let filtered = users;
+    
+    if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const filtered = users.filter(user => {
+      filtered = users.filter(user => {
         // Search in email
         const emailMatch = user.email.toLowerCase().includes(query);
         
@@ -102,7 +148,14 @@ export default function Admin() {
         
         return emailMatch || nameMatch || orderMatch;
       });
-      setFilteredUsers(filtered);
+    }
+    
+    setFilteredUsers(filtered);
+    
+    // Reset sorting when users change
+    if (sortField) {
+      setSortField(null);
+      setSortDirection('asc');
     }
   }, [users, searchQuery]);
 
@@ -530,12 +583,52 @@ export default function Admin() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Name</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => sortUsers('email')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Email
+                      {sortField === 'email' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => sortUsers('name')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Name
+                      {sortField === 'name' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>Order Status</TableHead>
-                  <TableHead>Order Info</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => sortUsers('order_submitted')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Order Status
+                      {sortField === 'order_submitted' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => sortUsers('orderDate')}
+                  >
+                    <div className="flex items-center gap-1">
+                      Order Info
+                      {sortField === 'orderDate' && (
+                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  </TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
