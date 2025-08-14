@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, RotateCcw, Download } from "lucide-react";
+import { Plus, Upload, RotateCcw, Download, Search } from "lucide-react";
 import AdminManagement from "@/components/AdminManagement";
 
 interface User {
@@ -30,6 +30,8 @@ interface User {
 
 export default function Admin() {
   const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [newUser, setNewUser] = useState({
@@ -46,10 +48,63 @@ export default function Admin() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
+  // Helper function to get clean display name from user data
+  const getDisplayName = (user: User) => {
+    // If we have clean first/last names, use them
+    if (user.first_name && user.last_name) {
+      return `${user.first_name} ${user.last_name}`;
+    }
+    
+    // If full_name is a JSON object (old format), parse it
+    if (typeof user.full_name === 'string' && user.full_name.startsWith('{')) {
+      try {
+        const nameObj = JSON.parse(user.full_name);
+        if (nameObj.FirstAndLast) {
+          return nameObj.FirstAndLast;
+        } else if (nameObj.First && nameObj.Last) {
+          return `${nameObj.First} ${nameObj.Last}`;
+        } else if (nameObj.First) {
+          return nameObj.First;
+        }
+      } catch (error) {
+        console.error('Error parsing name JSON:', error);
+      }
+    }
+    
+    // Fallback to full_name or empty
+    return user.full_name || '-';
+  };
+
   useEffect(() => {
     checkAdminAccess();
     fetchUsers();
   }, []);
+
+  // Filter users based on search query
+  useEffect(() => {
+    if (!searchQuery) {
+      setFilteredUsers(users);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = users.filter(user => {
+        // Search in email
+        const emailMatch = user.email.toLowerCase().includes(query);
+        
+        // Search in name (handle both clean names and JSON format)
+        let nameMatch = false;
+        const displayName = getDisplayName(user);
+        nameMatch = displayName.toLowerCase().includes(query);
+        
+        // Search in order numbers
+        const orderMatch = user.orders?.some(order => 
+          order.order_number?.toLowerCase().includes(query)
+        ) || false;
+        
+        return emailMatch || nameMatch || orderMatch;
+      });
+      setFilteredUsers(filtered);
+    }
+  }, [users, searchQuery]);
 
   const checkAdminAccess = async () => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -140,6 +195,7 @@ export default function Admin() {
       }));
       
       setUsers(transformedUsers);
+      setFilteredUsers(transformedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast({
@@ -427,7 +483,8 @@ export default function Admin() {
         </div>
       </div>
 
-      <AdminManagement />
+      {/* Temporarily removing AdminManagement until RLS policies are properly configured */}
+      {/* <AdminManagement /> */}
 
       <Card>
         <CardHeader>
@@ -453,7 +510,20 @@ export default function Admin() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Users ({users.length})</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Users ({filteredUsers.length})</CardTitle>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Search by email, name, or order number..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 w-80"
+                />
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -470,7 +540,7 @@ export default function Admin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => {
+                {filteredUsers.map((user) => {
                   const addr = user.shipping_address || {};
                   const order = user.orders?.[0];
                   
@@ -478,9 +548,7 @@ export default function Admin() {
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.email}</TableCell>
                       <TableCell>
-                        {user.first_name && user.last_name 
-                          ? `${user.first_name} ${user.last_name}` 
-                          : user.full_name || "-"}
+                        {getDisplayName(user)}
                       </TableCell>
                       <TableCell>
                         {addr.line1 || addr.address ? (
@@ -543,6 +611,11 @@ export default function Admin() {
                 })}
               </TableBody>
             </Table>
+            {filteredUsers.length === 0 && searchQuery && (
+              <div className="text-center py-8 text-muted-foreground">
+                No users found matching "{searchQuery}"
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
