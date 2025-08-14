@@ -153,7 +153,13 @@ export default function ThankYou() {
         </Card>
 
         <div className="pt-4">
-          <Button onClick={() => navigate("/auth")} variant="outline">
+          <Button 
+            onClick={async () => {
+              await supabase.auth.signOut();
+              navigate("/auth");
+            }} 
+            variant="outline"
+          >
             Return to Home
           </Button>
         </div>
