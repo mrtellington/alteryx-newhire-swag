@@ -69,18 +69,20 @@ serve(async (req) => {
 
     if (profErr) throw profErr;
 
-    // Fetch order data including tee size
+    // Fetch order data including tee size and order number
     let teeSize = null;
+    let orderNumber = null;
     if (orderId) {
       const { data: orderData, error: orderErr } = await supabase
         .from("orders")
-        .select("tee_size")
+        .select("tee_size, order_number")
         .eq("id", orderId)
         .eq("user_id", user.id)
         .maybeSingle();
       
       if (!orderErr && orderData) {
         teeSize = orderData.tee_size;
+        orderNumber = orderData.order_number;
       }
     }
 
@@ -95,7 +97,7 @@ serve(async (req) => {
     const userHtml = await renderAsync(
       React.createElement(OrderConfirmationEmail, {
         customerName: fullName,
-        orderId,
+        orderId: orderNumber,
         teeSize,
         shippingAddress: shippingHtml,
         isAdminNotification: false,
@@ -105,7 +107,7 @@ serve(async (req) => {
     const adminHtml = await renderAsync(
       React.createElement(OrderConfirmationEmail, {
         customerName: fullName,
-        orderId,
+        orderId: orderNumber,
         teeSize,
         shippingAddress: shippingHtml,
         isAdminNotification: true,
@@ -126,7 +128,7 @@ serve(async (req) => {
     const adminSend = await resend.emails.send({
       from: "admin@whitestonebranding.com",
       to: [adminEmail],
-      subject: `New order received${orderId ? ` - ${orderId}` : ""}`,
+      subject: `New order received${orderNumber ? ` - ${orderNumber}` : ""}`,
       html: adminHtml,
     });
 
