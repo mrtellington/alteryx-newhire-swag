@@ -82,34 +82,45 @@ const handler = async (req: Request): Promise<Response> => {
                   formData.EmailAddress ||
                   formData['Email Address'];
 
-    // Extract full name from various possible field names
-    let fullName = formData.fullName || 
-                   formData.FullName || 
-                   formData.name || 
-                   formData.Name ||
-                   formData['Full Name'];
+    // Extract name components properly
+    let fullName = '';
+    let firstName = '';
+    let lastName = '';
 
-    // If no full name, try to construct from first/last name or name object
-    if (!fullName) {
-      const firstName = formData.firstName || formData.FirstName || formData['First Name'];
-      const lastName = formData.lastName || formData.LastName || formData['Last Name'];
+    // First try to get full name directly
+    fullName = formData.fullName || 
+               formData.FullName || 
+               formData.name || 
+               formData['Full Name'] || '';
+
+    // Extract first and last names from various sources
+    firstName = formData.firstName || formData.FirstName || formData['First Name'] || '';
+    lastName = formData.lastName || formData.LastName || formData['Last Name'] || '';
+
+    // Handle nested name object from Cognito Forms (most common case)
+    if (formData.Name && typeof formData.Name === 'object') {
+      const nameObj = formData.Name;
       
-      // Handle nested name object from Cognito Forms
-      if (formData.Name && typeof formData.Name === 'object') {
-        const nameObj = formData.Name;
-        if (nameObj.FirstAndLast) {
-          fullName = nameObj.FirstAndLast;
-        } else if (nameObj.First && nameObj.Last) {
-          fullName = `${nameObj.First} ${nameObj.Last}`;
-        } else if (nameObj.First) {
-          fullName = nameObj.First;
-        }
+      // Extract individual components
+      firstName = nameObj.First || firstName;
+      lastName = nameObj.Last || lastName;
+      
+      // Use FirstAndLast if available, otherwise construct from parts
+      if (nameObj.FirstAndLast) {
+        fullName = nameObj.FirstAndLast;
       } else if (firstName && lastName) {
         fullName = `${firstName} ${lastName}`;
       } else if (firstName) {
         fullName = firstName;
       }
+    } else if (!fullName && firstName && lastName) {
+      // Construct full name from first/last if not already set
+      fullName = `${firstName} ${lastName}`;
+    } else if (!fullName && firstName) {
+      fullName = firstName;
     }
+
+    console.log('Parsed name components:', { firstName, lastName, fullName });
 
     if (!email) {
       console.error('No email found in form data');
