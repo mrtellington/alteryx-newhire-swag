@@ -19,6 +19,8 @@ const Auth = () => {
     orderNumber: string;
     dateSubmitted: string;
   } | null>(null);
+  const [lastAttempt, setLastAttempt] = useState<number | null>(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
 
   useEffect(() => {
     // SEO
@@ -47,6 +49,16 @@ const Auth = () => {
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (cooldownSeconds > 0) {
+      const timer = setTimeout(() => {
+        setCooldownSeconds(cooldownSeconds - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownSeconds]);
 
   const handleMagicLink = async () => {
     if (!isAllowedEmail(email)) {
@@ -124,8 +136,19 @@ const Auth = () => {
       options: { emailRedirectTo: redirectUrl },
     });
     setLoading(false);
+    
     if (error) {
-      toast({ title: "Unable to send link", description: error.message });
+      if (error.message.includes("rate limit") || error.message.includes("too many")) {
+        setLastAttempt(Date.now());
+        setCooldownSeconds(60); // 1 minute cooldown
+        toast({ 
+          title: "Too many attempts", 
+          description: "Please wait 60 seconds before trying again to avoid rate limiting.",
+          variant: "destructive"
+        });
+      } else {
+        toast({ title: "Unable to send link", description: error.message });
+      }
     } else {
       toast({ title: "Check your email", description: "We sent you a secure magic link." });
     }
@@ -193,8 +216,13 @@ const Auth = () => {
                   onChange={(e) => setEmail(e.target.value)} 
                 />
               </div>
-              <Button className="w-full" variant="brand" onClick={handleMagicLink} disabled={loading}>
-                {loading ? "Checking..." : "Send magic link"}
+              <Button 
+                className="w-full" 
+                variant="brand" 
+                onClick={handleMagicLink} 
+                disabled={loading || cooldownSeconds > 0}
+              >
+                {loading ? "Checking..." : cooldownSeconds > 0 ? `Wait ${cooldownSeconds}s` : "Send magic link"}
               </Button>
               <p className="text-xs text-muted-foreground">
                 Only registered emails ending with @alteryx.com are permitted.
