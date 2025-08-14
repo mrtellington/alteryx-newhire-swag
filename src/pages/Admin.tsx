@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload, RotateCcw, Download } from "lucide-react";
+import AdminManagement from "@/components/AdminManagement";
 
 interface User {
   id: string;
@@ -57,18 +58,62 @@ export default function Admin() {
       return;
     }
 
-    const email = session.user.email;
-    if (email !== "admin@whitestonebranding.com" && email !== "dev@whitestonebranding.com") {
+    try {
+      // Use the new admin checking function
+      const { data: isAdmin, error } = await supabase.rpc('is_user_admin', { 
+        user_email: session.user.email 
+      });
+
+      if (error) {
+        console.error('Error checking admin status:', error);
+        toast({
+          title: "Access Denied",
+          description: "Unable to verify admin access.",
+          variant: "destructive"
+        });
+        window.location.href = "/";
+        return;
+      }
+
+      if (!isAdmin) {
+        // Log unauthorized admin access attempt
+        await supabase.rpc('log_security_event', {
+          event_type: 'unauthorized_admin_access',
+          metadata: { 
+            email: session.user.email,
+            attempted_access: 'admin_dashboard',
+            timestamp: new Date().toISOString()
+          }
+        });
+
+        toast({
+          title: "Access Denied",
+          description: "You don't have admin access.",
+          variant: "destructive"
+        });
+        window.location.href = "/";
+        return;
+      }
+
+      // Log successful admin access
+      await supabase.rpc('log_security_event', {
+        event_type: 'admin_dashboard_access',
+        metadata: { 
+          email: session.user.email,
+          timestamp: new Date().toISOString()
+        }
+      });
+
+      setCurrentUser(session.user);
+    } catch (error) {
+      console.error('Error in admin access check:', error);
       toast({
         title: "Access Denied",
-        description: "You don't have admin access.",
+        description: "System error during admin verification.",
         variant: "destructive"
       });
       window.location.href = "/";
-      return;
     }
-
-    setCurrentUser(session.user);
   };
 
   const fetchUsers = async () => {
@@ -381,6 +426,8 @@ export default function Admin() {
           </Dialog>
         </div>
       </div>
+
+      <AdminManagement />
 
       <Card>
         <CardHeader>
