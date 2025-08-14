@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle } from "lucide-react";
 
@@ -61,7 +61,11 @@ const Auth = () => {
   }, [cooldownSeconds]);
 
   const handleMagicLink = async () => {
+    console.log("handleMagicLink called with email:", email);
+    console.log("Email validation result:", isAllowedEmail(email));
+    
     if (!isAllowedEmail(email)) {
+      console.log("Email validation failed for:", email);
       toast({ title: "Invalid email domain", description: "Use @alteryx.com or @whitestonebranding.com" });
       return;
     }
@@ -130,6 +134,7 @@ const Auth = () => {
       return;
     }
 
+    console.log("Attempting to send magic link to:", email.trim().toLowerCase());
     const redirectUrl = `${window.location.origin}/shop`;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim().toLowerCase(),
@@ -137,19 +142,32 @@ const Auth = () => {
     });
     setLoading(false);
     
+    console.log("Supabase auth response:", { error });
+    
     if (error) {
-      if (error.message.includes("rate limit") || error.message.includes("too many")) {
+      console.error("Auth error details:", {
+        message: error.message,
+        status: error.status,
+        name: error.name
+      });
+      
+      if (error.message.includes("rate limit") || error.message.includes("too many") || error.status === 429) {
         setLastAttempt(Date.now());
-        setCooldownSeconds(60); // 1 minute cooldown
+        setCooldownSeconds(180); // Increase to 3 minutes to be safer
         toast({ 
-          title: "Too many attempts", 
-          description: "Please wait 60 seconds before trying again to avoid rate limiting.",
+          title: "Rate limit exceeded", 
+          description: "Supabase has rate limited this email. Please wait 3 minutes before trying again.",
           variant: "destructive"
         });
       } else {
-        toast({ title: "Unable to send link", description: error.message });
+        toast({ 
+          title: "Unable to send link", 
+          description: `Error: ${error.message}`,
+          variant: "destructive"
+        });
       }
     } else {
+      console.log("Magic link sent successfully");
       toast({ title: "Check your email", description: "We sent you a secure magic link." });
     }
   };
