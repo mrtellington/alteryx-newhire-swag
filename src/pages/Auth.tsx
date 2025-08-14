@@ -153,10 +153,10 @@ const Auth = () => {
       
       if (error.message.includes("rate limit") || error.message.includes("too many") || error.status === 429) {
         setLastAttempt(Date.now());
-        setCooldownSeconds(180); // Increase to 3 minutes to be safer
+        setCooldownSeconds(60); // 1 minute cooldown
         toast({ 
           title: "Rate limit exceeded", 
-          description: "Supabase has rate limited this email. Please wait 3 minutes before trying again.",
+          description: "Supabase has rate limited this email. Please wait 1 minute before trying again.",
           variant: "destructive"
         });
       } else {
