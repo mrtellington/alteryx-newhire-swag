@@ -3,8 +3,14 @@ import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
 };
+
+const EXPECTED_ORIGINS = [
+  'cognito-webhook.zapier.com',
+  'hooks.zapier.com',
+  'www.cognitoforms.com'
+];
 
 interface CognitoFormData {
   email?: string;
@@ -33,14 +39,40 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Enhanced security: Check request origin
+    const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+    const userAgent = req.headers.get('user-agent') || '';
+    const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
+    
+    const isValidOrigin = EXPECTED_ORIGINS.some(expectedOrigin => 
+      origin.includes(expectedOrigin) || userAgent.includes('Zapier')
+    );
+
+    if (!isValidOrigin) {
+      console.warn('Suspicious request from unexpected origin:', { origin, userAgent, clientIP });
+      // Log but don't block to avoid false positives
+    }
+
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Webhook received from Cognito Forms - Updated deployment');
+    console.log('Webhook received from Cognito Forms - Enhanced security deployment');
+    console.log('Request details:', { origin, userAgent, clientIP, isValidOrigin });
     
     const formData: CognitoFormData = await req.json();
+
+    // Log security event for webhook access
+    await supabase.rpc('log_security_event', {
+      event_type: 'webhook_access',
+      metadata: { 
+        origin, 
+        userAgent, 
+        clientIP,
+        valid_origin: isValidOrigin 
+      }
+    });
     console.log('Form data received:', JSON.stringify(formData, null, 2));
 
     // Extract email from various possible field names
@@ -93,17 +125,30 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate email domain
+    // Validate email domain with enhanced security logging
     const emailLower = email.toLowerCase().trim();
     if (!emailLower.endsWith('@alteryx.com') && !emailLower.endsWith('@whitestonebranding.com')) {
       console.log(`Invalid email domain: ${emailLower}`);
+      
+      // Log security event for invalid domain attempts
+      await supabase.rpc('log_security_event', {
+        event_type: 'webhook_invalid_domain',
+        metadata: { 
+          email: emailLower, 
+          rejected_domain: emailLower.split('@')[1],
+          origin,
+          userAgent,
+          clientIP
+        }
+      });
+      
       return new Response(
         JSON.stringify({ 
           error: 'Invalid email domain',
           message: 'Only @alteryx.com and @whitestonebranding.com email addresses are allowed'
         }),
         { 
-          status: 400, 
+          status: 403, 
           headers: { 'Content-Type': 'application/json', ...corsHeaders } 
         }
       );
@@ -273,6 +318,17 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log(`User processed successfully: ${emailLower}, ID: ${result.userId}, Message: ${result.message}`);
+    
+    // Log successful user processing
+    await supabase.rpc('log_security_event', {
+      event_type: 'webhook_user_processed',
+      metadata: { 
+        email: emailLower, 
+        user_id: result.userId,
+        action: result.message?.includes('updated') ? 'updated' : 'created',
+        auth_user_created: Boolean(authUserId)
+      }
+    });
 
     return new Response(
       JSON.stringify({ 
@@ -294,6 +350,21 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error('Error in cognito-webhook function:', error);
+    
+    // Log security event for unexpected errors
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      await supabase.rpc('log_security_event', {
+        event_type: 'webhook_unexpected_error',
+        metadata: { error: error.message }
+      });
+    } catch (logError) {
+      console.error('Failed to log security event:', logError);
+    }
+    
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
