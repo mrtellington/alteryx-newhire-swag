@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -174,14 +174,15 @@ export type Database = {
       create_user_from_webhook: {
         Args:
           | {
+              auth_user_id?: string
               user_email: string
-              user_full_name?: string
               user_first_name?: string
+              user_full_name?: string
               user_last_name?: string
               user_shipping_address?: Json
-              auth_user_id?: string
             }
           | {
+              auth_user_id?: string
               user_email: string
               user_full_name?: string
               user_shipping_address?: Json
@@ -190,7 +191,6 @@ export type Database = {
               user_email: string
               user_full_name?: string
               user_shipping_address?: Json
-              auth_user_id?: string
             }
         Returns: Json
       }
@@ -203,7 +203,7 @@ export type Database = {
         Returns: boolean
       }
       log_security_event: {
-        Args: { event_type: string; user_id?: string; metadata?: Json }
+        Args: { event_type: string; metadata?: Json; user_id?: string }
         Returns: undefined
       }
       place_order: {
