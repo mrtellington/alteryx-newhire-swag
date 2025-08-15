@@ -184,8 +184,8 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <main className="min-h-screen bg-background px-4 py-10">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Back to Home Button */}
         <Button 
           variant="ghost" 
@@ -196,7 +196,8 @@ const AdminLogin = () => {
           Back to Home
         </Button>
 
-        <Card className="border-0 shadow-2xl">
+        <div className="flex justify-center">
+          <Card className="w-full max-w-md border-0 shadow-2xl">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
               <Shield className="h-8 w-8 text-primary" />
@@ -240,15 +241,11 @@ const AdminLogin = () => {
                 "Send Admin Magic Link"
               )}
             </Button>
-
-            <div className="text-center text-sm text-muted-foreground">
-              <p>Admin access restricted to:</p>
-              <p className="font-medium">@alteryx.com • @whitestonebranding.com</p>
-            </div>
           </CardContent>
         </Card>
+        </div>
       </div>
-    </div>
+    </main>
   );
 };
 
