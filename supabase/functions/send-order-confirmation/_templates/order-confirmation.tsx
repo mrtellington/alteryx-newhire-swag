@@ -67,18 +67,23 @@ export const OrderConfirmationEmail = ({
             <Heading style={h1}>Order Confirmation</Heading>
             <Text style={text}>Hi {customerName.split(' ')[0] || customerName},</Text>
             <Text style={text}>
-              Thanks for your order! We'll start preparing your New Hire Bundle right away.
+              Thanks for your order! We've received your New Hire Bundle request and will start preparing it right away. Your bundle includes:
+            </Text>
+            <Text style={bundleItems}>
+              • Alteryx branded tote bag<br/>
+              • Alteryx hat<br/>
+              • Alteryx stickers<br/>
+              • Alteryx water bottle<br/>
+              • Alteryx t-shirt (size: {teeSize || 'selected'})
             </Text>
             {orderId && (
               <Text style={text}>
-                <strong>Order ID:</strong> {orderId}
+                <strong>Order Number:</strong> {orderId}
               </Text>
             )}
-            {teeSize && (
-              <Text style={text}>
-                <strong>Tee Size:</strong> {teeSize}
-              </Text>
-            )}
+            <Text style={text}>
+              Your bundle will be shipped to the address below. We'll send you tracking information once it's on its way.
+            </Text>
           </>
         )}
         
@@ -153,6 +158,17 @@ const addressText = {
 const hr = {
   borderColor: '#e6e6e6',
   margin: '20px 0',
+}
+
+const bundleItems = {
+  color: '#333',
+  fontSize: '14px',
+  lineHeight: '22px',
+  margin: '16px 0',
+  padding: '12px',
+  backgroundColor: '#f5f8ff',
+  borderRadius: '6px',
+  borderLeft: '3px solid #2563eb',
 }
 
 const footer = {

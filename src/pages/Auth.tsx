@@ -43,12 +43,49 @@ const Auth = () => {
     }
     canonical.setAttribute('href', `${window.location.origin}/auth`);
 
-    // Redirect if already logged in
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      if (session) navigate("/shop", { replace: true });
+    // Redirect if already logged in and check order status
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (session) {
+        // Check if user has already placed an order
+        try {
+          const { data: users } = await supabase
+            .from("users")
+            .select("order_submitted")
+            .eq("id", session.user.id)
+            .single();
+          
+          if (users?.order_submitted) {
+            navigate("/thank-you", { replace: true });
+          } else {
+            navigate("/shop", { replace: true });
+          }
+        } catch (error) {
+          console.error("Error checking user order status:", error);
+          navigate("/shop", { replace: true });
+        }
+      }
     });
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) navigate("/shop", { replace: true });
+    
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session) {
+        // Check if user has already placed an order
+        try {
+          const { data: users } = await supabase
+            .from("users")
+            .select("order_submitted")
+            .eq("id", session.user.id)
+            .single();
+          
+          if (users?.order_submitted) {
+            navigate("/thank-you", { replace: true });
+          } else {
+            navigate("/shop", { replace: true });
+          }
+        } catch (error) {
+          console.error("Error checking user order status:", error);
+          navigate("/shop", { replace: true });
+        }
+      }
     });
     return () => subscription.unsubscribe();
   }, [navigate]);
@@ -128,6 +165,11 @@ const Auth = () => {
             }),
           });
           setLoading(false);
+          toast({ 
+            title: "Order already redeemed", 
+            description: "You have already claimed your New Hire Bundle. No additional magic links will be sent.",
+            variant: "destructive"
+          });
           return;
         }
       }

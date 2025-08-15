@@ -83,12 +83,19 @@ export default function SiteHeader() {
           {user && (
             <Button variant="outline" onClick={async () => {
               try {
+                // Clear all local storage
+                localStorage.clear();
+                sessionStorage.clear();
+                
+                // Sign out from Supabase
                 await supabase.auth.signOut();
-                // Force a complete reload to ensure clean state
-                window.location.replace("/auth");
+                
+                // Force a complete page reload to ensure clean state
+                window.location.href = "/auth";
               } catch (error) {
                 console.error('Error signing out:', error);
-                window.location.replace("/auth");
+                // Force reload even if signOut fails
+                window.location.href = "/auth";
               }
             }}>
               Logout
