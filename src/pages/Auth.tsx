@@ -112,62 +112,50 @@ const Auth = () => {
     
     setLoading(true);
     
-    // Check if user already has an order by email (including auth.users)
+    // Check if user already has an order by email
     try {
-      // First check in our users table
-      const { data: users, error: usersError } = await supabase
-        .from("users")
-        .select("id, order_submitted")
-        .eq("email", email.trim().toLowerCase())
-        .maybeSingle();
+      console.log("Checking if user exists and has ordered for email:", email.trim().toLowerCase());
+      
+      // Use the service role or a public function to check order status
+      // Since RLS might block unauthenticated queries, we need to use a different approach
+      const { data: userCheck, error: checkError } = await supabase
+        .rpc('check_user_order_status', { 
+          user_email: email.trim().toLowerCase() 
+        });
 
-      if (usersError && usersError.code !== "PGRST116") {
-        console.error("Error checking user:", usersError);
+      console.log("User order check result:", { userCheck, checkError });
+
+      if (checkError) {
+        console.error("Error checking user order status:", checkError);
+        // If we can't check, allow the magic link attempt
+      } else if (userCheck?.has_ordered) {
+        console.log("User has already submitted an order, showing order details");
+        
+        setOrderDetails({
+          orderNumber: userCheck.order_number,
+          dateSubmitted: new Date(userCheck.date_submitted).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric", 
+            month: "numeric",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZoneName: "short"
+          }),
+        });
         setLoading(false);
+        toast({ 
+          title: "Order already redeemed for this user.", 
+          description: "No additional magic links will be sent.",
+          variant: "destructive"
+        });
         return;
       }
 
-      // If user exists and has already ordered, show order details and prevent magic link
-      if (users?.order_submitted) {
-        console.log("User has already submitted an order, showing order details");
-        
-        // Get order details
-        const { data: orders, error: ordersError } = await supabase
-          .from("orders")
-          .select("order_number, date_submitted")
-          .eq("user_id", users.id)
-          .single();
-
-        if (ordersError) {
-          console.error("Error fetching order:", ordersError);
-          setLoading(false);
-          return;
-        } else if (orders) {
-          setOrderDetails({
-            orderNumber: orders.order_number,
-            dateSubmitted: new Date(orders.date_submitted).toLocaleDateString("en-US", {
-              weekday: "long",
-              year: "numeric", 
-              month: "numeric",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              timeZoneName: "short"
-            }),
-          });
-          setLoading(false);
-          toast({ 
-            title: "Order already redeemed for this user.", 
-            description: "No additional magic links will be sent.",
-            variant: "destructive"
-          });
-          return;
-        }
-      }
     } catch (error) {
       console.error("Error checking order status:", error);
-      setLoading(false);
-      return;
+      // If we can't check the order status, we'll allow the magic link attempt
+      // This prevents blocking legitimate users if there's a system error
     }
 
     console.log("Attempting to send magic link to:", email.trim().toLowerCase());
