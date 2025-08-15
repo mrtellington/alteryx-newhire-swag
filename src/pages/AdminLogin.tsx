@@ -135,33 +135,8 @@ const AdminLogin = () => {
     setLoading(true);
 
     try {
-      // Check if email exists in admin_users table
-      const { data: adminUsers, error: adminCheckError } = await supabase
-        .from('admin_users')
-        .select('email, active')
-        .eq('email', email.toLowerCase())
-        .eq('active', true);
-
-      if (adminCheckError) {
-        console.error('Error checking admin users:', adminCheckError);
-        toast({
-          title: "Error",
-          description: "Unable to verify admin access. Please try again.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
-
-      if (!adminUsers || adminUsers.length === 0) {
-        toast({
-          title: "Access Denied",
-          description: "Your email address is not registered as an admin.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
-      }
+      // Just validate the email domain - the actual admin check happens after login
+      // We'll check if they're an admin in the auth state change handler
 
       // Send magic link
       const redirectUrl = `${window.location.origin}/admin`;
