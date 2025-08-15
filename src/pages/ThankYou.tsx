@@ -154,13 +154,12 @@ export default function ThankYou() {
 
         <div className="pt-4">
           <Button 
-            onClick={async () => {
-              await supabase.auth.signOut();
-              navigate("/auth");
+            onClick={() => {
+              window.location.href = "https://alteryxswag.com";
             }} 
             variant="outline"
           >
-            Return to Home
+            Return Home
           </Button>
         </div>
       </div>

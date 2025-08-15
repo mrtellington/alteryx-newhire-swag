@@ -30,7 +30,7 @@ const addressSchema = z
     phone: z
       .string()
       .min(7, "Phone number is required")
-      .regex(/^[+]?[-().\s\d]{7,20}$/, "Enter a valid phone number"),
+      .regex(/^[+]?[-().\s\d]{7,25}$/, "Enter a valid phone number with country code if international"),
   })
   .superRefine((val, ctx) => {
     const pattern = postalCodePatterns[val.country];
@@ -112,10 +112,15 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
       }
       const userId = userRes.user.id;
 
+      const shippingWithPhone = {
+        ...values,
+        phone: values.phone
+      };
+
       const { error: updateErr } = await supabase
         .from("users")
         .update({ 
-          shipping_address: values,
+          shipping_address: shippingWithPhone,
           first_name: values.first_name,
           last_name: values.last_name,
           full_name: `${values.first_name} ${values.last_name}`
@@ -178,7 +183,7 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
         <div className="space-y-2">
           <FormLabel>Search address</FormLabel>
           <AddressAutocomplete onSelect={applyAutocomplete} />
-          <FormDescription>You can still edit any field below after selecting.</FormDescription>
+          <FormDescription>Use Google address search for accurate validation. You can edit fields below after selecting.</FormDescription>
         </div>
         <FormField
           control={form.control}
@@ -279,7 +284,7 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
             <FormItem>
               <FormLabel>Phone Number</FormLabel>
               <FormControl>
-                <Input placeholder="e.g., +1 555 123 4567" {...field} />
+                <Input placeholder="e.g., +1 555 123 4567 or +44 20 1234 5678" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

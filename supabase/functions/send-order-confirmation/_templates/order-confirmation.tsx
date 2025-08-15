@@ -18,6 +18,7 @@ interface OrderConfirmationEmailProps {
   shippingAddress: string
   isAdminNotification?: boolean
   customerEmail?: string
+  customerPhone?: string
 }
 
 export const OrderConfirmationEmail = ({
@@ -27,6 +28,7 @@ export const OrderConfirmationEmail = ({
   shippingAddress,
   isAdminNotification = false,
   customerEmail,
+  customerPhone,
 }: OrderConfirmationEmailProps) => (
   <Html>
     <Head />
@@ -54,11 +56,16 @@ export const OrderConfirmationEmail = ({
             <Text style={text}>
               <strong>Customer:</strong> {customerName} ({customerEmail})
             </Text>
+            {customerPhone && (
+              <Text style={text}>
+                <strong>Phone:</strong> {customerPhone}
+              </Text>
+            )}
           </>
         ) : (
           <>
             <Heading style={h1}>Order Confirmation</Heading>
-            <Text style={text}>Hi {customerName},</Text>
+            <Text style={text}>Hi {customerName.split(' ')[0] || customerName},</Text>
             <Text style={text}>
               Thanks for your order! We'll start preparing your New Hire Bundle right away.
             </Text>

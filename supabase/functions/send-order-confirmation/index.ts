@@ -88,6 +88,7 @@ serve(async (req) => {
 
     const fullName = profile?.full_name || userEmail.split("@")[0];
     const shippingHtml = formatAddress(profile?.shipping_address);
+    const customerPhone = profile?.shipping_address?.phone;
 
     const resend = new Resend(resendKey);
 
@@ -112,19 +113,19 @@ serve(async (req) => {
         shippingAddress: shippingHtml,
         isAdminNotification: true,
         customerEmail: userEmail,
+        customerPhone,
       })
     );
 
-    // Send to customer (bcc admin)
+    // Send to customer only
     const userSend = await resend.emails.send({
       from: "admin@whitestonebranding.com",
       to: [userEmail],
-      bcc: [adminEmail],
       subject: "Your order confirmation",
       html: userHtml,
     });
 
-    // Also send a dedicated admin notification (optional redundancy)
+    // Send admin notification separately
     const adminSend = await resend.emails.send({
       from: "admin@whitestonebranding.com",
       to: [adminEmail],
