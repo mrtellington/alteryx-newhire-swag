@@ -116,8 +116,7 @@ const Auth = () => {
     try {
       console.log("Checking if user exists and has ordered for email:", email.trim().toLowerCase());
       
-      // Use the service role or a public function to check order status
-      // Since RLS might block unauthenticated queries, we need to use a different approach
+      // Use the service role function to check order status (bypasses RLS)
       const { data: userCheck, error: checkError } = await supabase
         .rpc('check_user_order_status', { 
           user_email: email.trim().toLowerCase() 
@@ -128,28 +127,34 @@ const Auth = () => {
       if (checkError) {
         console.error("Error checking user order status:", checkError);
         // If we can't check, allow the magic link attempt
-      } else if (userCheck?.has_ordered) {
-        console.log("User has already submitted an order, showing order details");
+      } else if (userCheck) {
+        // Parse the JSON response
+        const result = typeof userCheck === 'object' ? userCheck : JSON.parse(userCheck as string);
         
-        setOrderDetails({
-          orderNumber: userCheck.order_number,
-          dateSubmitted: new Date(userCheck.date_submitted).toLocaleDateString("en-US", {
-            weekday: "long",
-            year: "numeric", 
-            month: "numeric",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-            timeZoneName: "short"
-          }),
-        });
-        setLoading(false);
-        toast({ 
-          title: "Order already redeemed for this user.", 
-          description: "No additional magic links will be sent.",
-          variant: "destructive"
-        });
-        return;
+        if (result.has_ordered) {
+          console.log("User has already submitted an order, showing order details");
+          
+          setOrderDetails({
+            orderNumber: result.order_number || 'Unknown',
+            dateSubmitted: result.date_submitted ? 
+              new Date(result.date_submitted).toLocaleDateString("en-US", {
+                weekday: "long",
+                year: "numeric", 
+                month: "numeric",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                timeZoneName: "short"
+              }) : 'Unknown date',
+          });
+          setLoading(false);
+          toast({ 
+            title: "Order already redeemed for this user.", 
+            description: "No additional magic links will be sent.",
+            variant: "destructive"
+          });
+          return;
+        }
       }
 
     } catch (error) {

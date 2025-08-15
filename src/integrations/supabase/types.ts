@@ -171,6 +171,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_user_order_status: {
+        Args: { user_email: string }
+        Returns: Json
+      }
       create_user_from_webhook: {
         Args:
           | {
