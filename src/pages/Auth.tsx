@@ -157,8 +157,8 @@ const Auth = () => {
           });
           setLoading(false);
           toast({ 
-            title: "Order already redeemed", 
-            description: "You have already claimed your New Hire Bundle. No additional magic links will be sent.",
+            title: "Order already redeemed for this user.", 
+            description: "No additional magic links will be sent.",
             variant: "destructive"
           });
           return;
