@@ -1,0 +1,255 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { Shield, ArrowLeft } from "lucide-react";
+
+const AdminLogin = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [lastAttempt, setLastAttempt] = useState<number | null>(null);
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
+
+  useEffect(() => {
+    // SEO
+    document.title = "Admin Login | Alteryx New Hire Store";
+    const meta = (document.querySelector('meta[name="description"]') as HTMLMetaElement | null) ?? (() => {
+      const m = document.createElement('meta');
+      m.setAttribute('name', 'description');
+      document.head.appendChild(m);
+      return m as HTMLMetaElement;
+    })();
+    meta.setAttribute("content", "Secure admin access for Alteryx New Hire Store administration");
+    
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', `${window.location.origin}/admin/login`);
+
+    // Check if already authenticated and admin
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+      if (session) {
+        try {
+          const { data: isAdmin, error } = await supabase.rpc('is_user_admin');
+          if (!error && isAdmin) {
+            navigate('/admin');
+          } else {
+            // Not an admin, sign out and show error
+            await supabase.auth.signOut();
+            toast({
+              title: "Access Denied",
+              description: "You don't have admin privileges.",
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          await supabase.auth.signOut();
+        }
+      }
+    });
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        // Will be handled by onAuthStateChange
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  // Cooldown timer
+  useEffect(() => {
+    if (lastAttempt && cooldownSeconds > 0) {
+      const timer = setInterval(() => {
+        setCooldownSeconds(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [lastAttempt, cooldownSeconds]);
+
+  const isValidAdminEmail = (email: string) => {
+    const emailTrimmed = email.trim().toLowerCase();
+    return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
+  };
+
+  const handleAdminLogin = async () => {
+    if (!email) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your admin email address.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!isValidAdminEmail(email)) {
+      toast({
+        title: "Invalid Email Domain",
+        description: "Admin access is restricted to @alteryx.com and @whitestonebranding.com email addresses.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Check if email exists in admin_users table
+      const { data: adminUsers, error: adminCheckError } = await supabase
+        .from('admin_users')
+        .select('email, active')
+        .eq('email', email.toLowerCase())
+        .eq('active', true);
+
+      if (adminCheckError) {
+        console.error('Error checking admin users:', adminCheckError);
+        toast({
+          title: "Error",
+          description: "Unable to verify admin access. Please try again.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      if (!adminUsers || adminUsers.length === 0) {
+        toast({
+          title: "Access Denied",
+          description: "Your email address is not registered as an admin.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Send magic link
+      const redirectUrl = `${window.location.origin}/admin`;
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: redirectUrl
+        }
+      });
+
+      if (error) {
+        if (error.message.includes('rate limit') || error.message.includes('too many')) {
+          setLastAttempt(Date.now());
+          setCooldownSeconds(60);
+          toast({
+            title: "Rate Limited",
+            description: "Too many attempts. Please wait before trying again.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
+      } else {
+        toast({
+          title: "Magic Link Sent",
+          description: `A secure login link has been sent to ${email}. Check your inbox and click the link to access the admin dashboard.`,
+        });
+        setEmail("");
+      }
+    } catch (error) {
+      console.error('Admin login error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive"
+      });
+    }
+
+    setLoading(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
+      <div className="w-full max-w-md space-y-6">
+        {/* Back to Home Button */}
+        <Button 
+          variant="ghost" 
+          className="mb-4" 
+          onClick={() => navigate('/')}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Home
+        </Button>
+
+        <Card className="border-0 shadow-2xl">
+          <CardHeader className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+              <Shield className="h-8 w-8 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-bold">Admin Access</CardTitle>
+              <CardDescription className="text-base">
+                Enter your admin email to receive a secure magic link
+              </CardDescription>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="email">Admin Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@alteryx.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={loading || cooldownSeconds > 0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !loading && cooldownSeconds === 0) {
+                    handleAdminLogin();
+                  }
+                }}
+              />
+            </div>
+
+            <Button 
+              onClick={handleAdminLogin} 
+              disabled={loading || cooldownSeconds > 0}
+              className="w-full"
+            >
+              {loading ? (
+                "Sending Magic Link..."
+              ) : cooldownSeconds > 0 ? (
+                `Wait ${cooldownSeconds}s`
+              ) : (
+                "Send Admin Magic Link"
+              )}
+            </Button>
+
+            <div className="text-center text-sm text-muted-foreground">
+              <p>Admin access restricted to:</p>
+              <p className="font-medium">@alteryx.com • @whitestonebranding.com</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AdminLogin;

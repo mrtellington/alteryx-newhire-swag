@@ -162,7 +162,7 @@ export default function Admin() {
   const checkAdminAccess = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      window.location.href = "/auth";
+      window.location.href = "/admin/login";
       return;
     }
 
