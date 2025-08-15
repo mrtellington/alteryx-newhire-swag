@@ -35,27 +35,49 @@ const AdminLogin = () => {
     canonical.setAttribute('href', `${window.location.origin}/admin/login`);
 
     // Check if already authenticated and admin
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Admin login auth state change:', event, session?.user?.email);
+      
       if (session) {
-        try {
-          const { data: isAdmin, error } = await supabase.rpc('is_user_admin', {
-            user_email: session.user.email
-          });
-          if (!error && isAdmin) {
-            navigate('/admin');
-          } else {
-            // Not an admin, sign out and show error
-            await supabase.auth.signOut();
+        // Small delay to ensure session is fully established
+        setTimeout(async () => {
+          try {
+            const { data: isAdmin, error } = await supabase.rpc('is_user_admin', {
+              user_email: session.user.email
+            });
+            
+            console.log('Admin check result:', { isAdmin, error, email: session.user.email });
+            
+            if (error) {
+              console.error('RPC error:', error);
+              toast({
+                title: "Error",
+                description: `Admin check failed: ${error.message}`,
+                variant: "destructive"
+              });
+              return;
+            }
+            
+            if (isAdmin) {
+              navigate('/admin');
+            } else {
+              // Not an admin, sign out and show error
+              await supabase.auth.signOut();
+              toast({
+                title: "Access Denied",
+                description: "You don't have admin privileges.",
+                variant: "destructive"
+              });
+            }
+          } catch (error) {
+            console.error('Error checking admin status:', error);
             toast({
-              title: "Access Denied",
-              description: "You don't have admin privileges.",
+              title: "Error", 
+              description: "Failed to verify admin access",
               variant: "destructive"
             });
           }
-        } catch (error) {
-          console.error('Error checking admin status:', error);
-          await supabase.auth.signOut();
-        }
+        }, 1000);
       }
     });
 
