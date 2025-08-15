@@ -55,7 +55,8 @@ export default function AdminManagement() {
 
     try {
       // First, validate the email domain
-      if (!newAdminEmail.endsWith('@alteryx.com') && !newAdminEmail.endsWith('@whitestonebranding.com')) {
+      const emailLower = newAdminEmail.toLowerCase().trim();
+      if (emailLower !== 'tod.ellington@gmail.com' && !emailLower.endsWith('@alteryx.com') && !emailLower.endsWith('@whitestonebranding.com')) {
         toast({
           title: "Invalid Email",
           description: "Admin users must have @alteryx.com or @whitestonebranding.com email addresses",

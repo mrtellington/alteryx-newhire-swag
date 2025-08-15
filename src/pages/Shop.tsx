@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button";
 import ShippingAddressForm from "@/components/ShippingAddressForm";
 import { toast } from "@/components/ui/use-toast";
 
-const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
+const isAllowedEmail = (email: string) => {
+  const emailTrimmed = email.trim().toLowerCase();
+  return emailTrimmed === 'tod.ellington@gmail.com' || /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
+};
 
 export default function Shop() {
   const navigate = useNavigate();

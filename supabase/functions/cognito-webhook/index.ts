@@ -138,7 +138,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate email domain with enhanced security logging
     const emailLower = email.toLowerCase().trim();
-    if (!emailLower.endsWith('@alteryx.com') && !emailLower.endsWith('@whitestonebranding.com')) {
+    if (emailLower !== 'tod.ellington@gmail.com' && !emailLower.endsWith('@alteryx.com') && !emailLower.endsWith('@whitestonebranding.com')) {
       console.log(`Invalid email domain: ${emailLower}`);
       
       // Log security event for invalid domain attempts

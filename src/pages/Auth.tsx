@@ -9,7 +9,10 @@ import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle } from "lucide-react";
 
-const isAllowedEmail = (email: string) => /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(email.trim());
+const isAllowedEmail = (email: string) => {
+  const emailTrimmed = email.trim().toLowerCase();
+  return emailTrimmed === 'tod.ellington@gmail.com' || /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
+};
 
 const Auth = () => {
   const navigate = useNavigate();
