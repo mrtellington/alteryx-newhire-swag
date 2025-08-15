@@ -112,13 +112,14 @@ const Auth = () => {
     
     setLoading(true);
     
-    // Check if user already has an order
+    // Check if user already has an order by email (including auth.users)
     try {
+      // First check in our users table
       const { data: users, error: usersError } = await supabase
         .from("users")
-        .select("order_submitted")
+        .select("id, order_submitted")
         .eq("email", email.trim().toLowerCase())
-        .single();
+        .maybeSingle();
 
       if (usersError && usersError.code !== "PGRST116") {
         console.error("Error checking user:", usersError);
@@ -126,25 +127,15 @@ const Auth = () => {
         return;
       }
 
+      // If user exists and has already ordered, show order details and prevent magic link
       if (users?.order_submitted) {
-        // Get user ID first
-        const { data: userData, error: userIdError } = await supabase
-          .from("users")
-          .select("id")
-          .eq("email", email.trim().toLowerCase())
-          .single();
-
-        if (userIdError || !userData) {
-          console.error("Error getting user ID:", userIdError);
-          setLoading(false);
-          return;
-        }
-
+        console.log("User has already submitted an order, showing order details");
+        
         // Get order details
         const { data: orders, error: ordersError } = await supabase
           .from("orders")
           .select("order_number, date_submitted")
-          .eq("user_id", userData.id)
+          .eq("user_id", users.id)
           .single();
 
         if (ordersError) {
