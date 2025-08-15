@@ -38,7 +38,9 @@ const AdminLogin = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session) {
         try {
-          const { data: isAdmin, error } = await supabase.rpc('is_user_admin');
+          const { data: isAdmin, error } = await supabase.rpc('is_user_admin', {
+            user_email: session.user.email
+          });
           if (!error && isAdmin) {
             navigate('/admin');
           } else {
@@ -184,20 +186,19 @@ const AdminLogin = () => {
   };
 
   return (
-    <main className="min-h-screen bg-background px-4 py-10">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <main className="min-h-screen bg-brand-blue flex flex-col items-center justify-start pt-16 px-4">
+      <div className="w-full max-w-md space-y-6">
         {/* Back to Home Button */}
         <Button 
           variant="ghost" 
-          className="mb-4" 
+          className="mb-4 text-white hover:text-white hover:bg-white/10" 
           onClick={() => navigate('/')}
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Home
         </Button>
 
-        <div className="flex justify-center">
-          <Card className="w-full max-w-md border-0 shadow-2xl">
+        <Card className="w-full max-w-md">
           <CardHeader className="text-center space-y-4">
             <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
               <Shield className="h-8 w-8 text-primary" />
@@ -243,7 +244,6 @@ const AdminLogin = () => {
             </Button>
           </CardContent>
         </Card>
-        </div>
       </div>
     </main>
   );
