@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit } from "lucide-react";
+import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon } from "lucide-react";
 import AdminManagement from "@/components/AdminManagement";
 
 interface User {
@@ -26,6 +27,7 @@ interface User {
     date_submitted: string;
     tee_size: string | null;
     tracking_number?: string | null;
+    shipping_carrier?: string | null;
   }>;
 }
 
@@ -49,6 +51,7 @@ export default function Admin() {
   });
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [editingTracking, setEditingTracking] = useState<{orderId: string, value: string} | null>(null);
+  const [editingCarrier, setEditingCarrier] = useState<{orderId: string, value: string} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
@@ -237,7 +240,8 @@ export default function Admin() {
             order_number,
             date_submitted,
             tee_size,
-            tracking_number
+            tracking_number,
+            shipping_carrier
           )
         `)
         .order("created_at", { ascending: false });
@@ -347,6 +351,40 @@ export default function Admin() {
     }
   };
 
+  const updateShippingCarrier = async (orderId: string, shippingCarrier: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ shipping_carrier: shippingCarrier })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error updating shipping carrier:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update shipping carrier",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Shipping carrier updated successfully"
+      });
+
+      fetchUsers();
+      setEditingCarrier(null);
+    } catch (error) {
+      console.error('Error updating tracking number:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update tracking number",
+        variant: "destructive"
+      });
+    }
+  };
+
   const resetOrderPermission = async (userId: string) => {
     try {
       const { error } = await supabase
@@ -430,13 +468,14 @@ export default function Admin() {
 
   const exportUsers = () => {
     const csvContent = [
-      "email,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number,tee_size,tracking_number",
+      "email,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number,tee_size,tracking_number,shipping_carrier",
       ...users.map(user => {
         const addr = user.shipping_address || {};
         const orderDate = user.orders?.[0]?.date_submitted || '';
         const orderNumber = user.orders?.[0]?.order_number || '';
         const teeSize = user.orders?.[0]?.tee_size || '';
         const trackingNumber = user.orders?.[0]?.tracking_number || '';
+        const shippingCarrier = user.orders?.[0]?.shipping_carrier || '';
         return [
           user.email,
           user.full_name || '',
@@ -449,7 +488,8 @@ export default function Admin() {
           orderDate,
           orderNumber,
           teeSize,
-          trackingNumber
+          trackingNumber,
+          shippingCarrier
         ].join(',');
       })
     ].join('\n');
@@ -762,6 +802,52 @@ export default function Admin() {
                                              size="sm"
                                              variant="ghost"
                                              onClick={() => setEditingTracking({orderId: order.id, value: order.tracking_number || ''})}
+                                             className="h-6 px-1"
+                                           >
+                                             <Edit className="w-3 h-3" />
+                                           </Button>
+                                         </div>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                       {editingCarrier?.orderId === order.id ? (
+                                         <div className="flex items-center gap-1">
+                                           <Select
+                                             value={editingCarrier.value}
+                                             onValueChange={(value) => setEditingCarrier({orderId: order.id, value})}
+                                           >
+                                             <SelectTrigger className="w-32 h-6 text-xs">
+                                               <SelectValue placeholder="Select carrier" />
+                                             </SelectTrigger>
+                                             <SelectContent className="bg-background z-50">
+                                               <SelectItem value="Fedex">Fedex</SelectItem>
+                                               <SelectItem value="Other">Other</SelectItem>
+                                             </SelectContent>
+                                           </Select>
+                                           <Button
+                                             size="sm"
+                                             variant="ghost"
+                                             onClick={() => updateShippingCarrier(order.id, editingCarrier.value)}
+                                             className="h-6 px-2"
+                                           >
+                                             Save
+                                           </Button>
+                                         </div>
+                                       ) : (
+                                         <div className="flex items-center gap-1">
+                                           {order.shipping_carrier ? (
+                                             <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded inline-block font-medium">
+                                               {order.shipping_carrier}
+                                             </span>
+                                           ) : (
+                                             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded inline-block">
+                                               No carrier
+                                             </span>
+                                           )}
+                                           <Button
+                                             size="sm"
+                                             variant="ghost"
+                                             onClick={() => setEditingCarrier({orderId: order.id, value: order.shipping_carrier || ''})}
                                              className="h-6 px-1"
                                            >
                                              <Edit className="w-3 h-3" />
