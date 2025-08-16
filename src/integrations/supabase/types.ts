@@ -68,6 +68,7 @@ export type Database = {
           id: string
           order_number: string | null
           tee_size: string | null
+          tracking_number: string | null
           user_id: string
         }
         Insert: {
@@ -75,6 +76,7 @@ export type Database = {
           id?: string
           order_number?: string | null
           tee_size?: string | null
+          tracking_number?: string | null
           user_id: string
         }
         Update: {
@@ -82,6 +84,7 @@ export type Database = {
           id?: string
           order_number?: string | null
           tee_size?: string | null
+          tracking_number?: string | null
           user_id?: string
         }
         Relationships: [

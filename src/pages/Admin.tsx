@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit } from "lucide-react";
 import AdminManagement from "@/components/AdminManagement";
 
 interface User {
@@ -25,6 +25,7 @@ interface User {
     order_number: string;
     date_submitted: string;
     tee_size: string | null;
+    tracking_number?: string | null;
   }>;
 }
 
@@ -47,6 +48,7 @@ export default function Admin() {
     phone: ""
   });
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [editingTracking, setEditingTracking] = useState<{orderId: string, value: string} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
@@ -234,7 +236,8 @@ export default function Admin() {
             id,
             order_number,
             date_submitted,
-            tee_size
+            tee_size,
+            tracking_number
           )
         `)
         .order("created_at", { ascending: false });
@@ -305,6 +308,40 @@ export default function Admin() {
       toast({
         title: "Error",
         description: "Failed to add user",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const updateTrackingNumber = async (orderId: string, trackingNumber: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ tracking_number: trackingNumber })
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error updating tracking number:', error);
+        toast({
+          title: "Error",
+          description: "Failed to update tracking number",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      toast({
+        title: "Success",
+        description: "Tracking number updated successfully"
+      });
+
+      fetchUsers();
+      setEditingTracking(null);
+    } catch (error) {
+      console.error('Error updating tracking number:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update tracking number",
         variant: "destructive"
       });
     }
@@ -393,12 +430,13 @@ export default function Admin() {
 
   const exportUsers = () => {
     const csvContent = [
-      "email,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number,tee_size",
+      "email,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number,tee_size,tracking_number",
       ...users.map(user => {
         const addr = user.shipping_address || {};
         const orderDate = user.orders?.[0]?.date_submitted || '';
         const orderNumber = user.orders?.[0]?.order_number || '';
         const teeSize = user.orders?.[0]?.tee_size || '';
+        const trackingNumber = user.orders?.[0]?.tracking_number || '';
         return [
           user.email,
           user.full_name || '',
@@ -410,7 +448,8 @@ export default function Admin() {
           user.order_submitted,
           orderDate,
           orderNumber,
-          teeSize
+          teeSize,
+          trackingNumber
         ].join(',');
       })
     ].join('\n');
@@ -664,29 +703,78 @@ export default function Admin() {
                           {user.order_submitted ? "Ordered" : "Pending"}
                         </span>
                       </TableCell>
-                       <TableCell>
-                         {user.orders && user.orders.length > 0 ? (
-                           <div className="text-sm space-y-1">
-                              {user.orders.map((order, index) => (
-                                <div key={order.id} className="border-b border-muted pb-1 last:border-b-0 last:pb-0">
-                                  <div>{new Date(order.date_submitted).toLocaleDateString()}</div>
-                                  <div className="text-muted-foreground">{order.order_number}</div>
-                                  <div className="mt-1">
-                                    {order.tee_size ? (
-                                      <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block font-medium">
-                                        Size: {order.tee_size}
-                                      </span>
-                                    ) : (
-                                      <span className="text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded inline-block">
-                                        No size recorded
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                           </div>
-                         ) : "-"}
-                       </TableCell>
+                        <TableCell>
+                          {user.orders && user.orders.length > 0 ? (
+                            <div className="text-sm space-y-1">
+                               {user.orders.map((order, index) => (
+                                 <div key={order.id} className="border-b border-muted pb-1 last:border-b-0 last:pb-0">
+                                   <div>{new Date(order.date_submitted).toLocaleDateString()}</div>
+                                   <div className="text-muted-foreground">{order.order_number}</div>
+                                   <div className="mt-1 space-y-1">
+                                     {order.tee_size ? (
+                                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block font-medium">
+                                         Size: {order.tee_size}
+                                       </span>
+                                     ) : (
+                                       <span className="text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded inline-block">
+                                         No size recorded
+                                       </span>
+                                     )}
+                                     <div className="flex items-center gap-1">
+                                       {editingTracking?.orderId === order.id ? (
+                                         <div className="flex items-center gap-1">
+                                           <input
+                                             type="text"
+                                             value={editingTracking.value}
+                                             onChange={(e) => setEditingTracking({orderId: order.id, value: e.target.value})}
+                                             onKeyDown={(e) => {
+                                               if (e.key === 'Enter') {
+                                                 updateTrackingNumber(order.id, editingTracking.value);
+                                               } else if (e.key === 'Escape') {
+                                                 setEditingTracking(null);
+                                               }
+                                             }}
+                                             placeholder="Tracking number"
+                                             className="text-xs px-2 py-1 border rounded w-32"
+                                             autoFocus
+                                           />
+                                           <Button
+                                             size="sm"
+                                             variant="ghost"
+                                             onClick={() => updateTrackingNumber(order.id, editingTracking.value)}
+                                             className="h-6 px-2"
+                                           >
+                                             Save
+                                           </Button>
+                                         </div>
+                                       ) : (
+                                         <div className="flex items-center gap-1">
+                                           {order.tracking_number ? (
+                                             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded inline-block font-medium">
+                                               Tracking: {order.tracking_number}
+                                             </span>
+                                           ) : (
+                                             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded inline-block">
+                                               No tracking
+                                             </span>
+                                           )}
+                                           <Button
+                                             size="sm"
+                                             variant="ghost"
+                                             onClick={() => setEditingTracking({orderId: order.id, value: order.tracking_number || ''})}
+                                             className="h-6 px-1"
+                                           >
+                                             <Edit className="w-3 h-3" />
+                                           </Button>
+                                         </div>
+                                       )}
+                                     </div>
+                                   </div>
+                                 </div>
+                               ))}
+                            </div>
+                          ) : "-"}
+                        </TableCell>
                       <TableCell>
                         {user.order_submitted && (
                           <Button
