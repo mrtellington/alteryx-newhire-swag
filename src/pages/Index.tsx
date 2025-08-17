@@ -32,46 +32,21 @@ const Index = () => {
     }
     canonical.setAttribute('href', `${window.location.origin}/`);
 
-    // Set up auth listener first
-const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) {
-        navigate("/auth", { replace: true });
-      } else {
-        const userEmail = session.user.email ?? null;
-        setEmail(userEmail);
-        if (userEmail && !isAllowedEmail(userEmail)) {
-          setTimeout(() => {
-            toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
-            supabase.auth.signOut();
-            navigate("/auth", { replace: true });
-          }, 0);
-        } else {
-          navigate("/shop", { replace: true });
-        }
-      }
-    });
-
-    // Then check existing session
-supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth", { replace: true });
-      } else {
-        const userEmail = session.user.email ?? null;
-        setEmail(userEmail);
-        if (userEmail && !isAllowedEmail(userEmail)) {
-          toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
-          supabase.auth.signOut();
-          navigate("/auth", { replace: true });
-        } else {
-          navigate("/shop", { replace: true });
-        }
-      }
+    // Force sign out any existing session and redirect to auth
+    const initAuth = async () => {
+      // Clear any existing session
+      await supabase.auth.signOut();
+      
+      // Clear local storage
+      localStorage.clear();
+      sessionStorage.clear();
+      
+      // Always redirect to auth page
+      navigate("/auth", { replace: true });
       setLoading(false);
-    });
-
-    return () => {
-      subscription.unsubscribe();
     };
+
+    initAuth();
   }, [navigate]);
 
   const handleSignOut = async () => {
