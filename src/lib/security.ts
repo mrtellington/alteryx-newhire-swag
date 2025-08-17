@@ -169,7 +169,7 @@ export function isAllowedEmailDomain(email: string): boolean {
 // Admin email validation
 export function isValidAdminEmail(email: string): boolean {
   const emailTrimmed = email.trim().toLowerCase();
-  return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
+  return emailTrimmed === 'admin@whitestonebranding.com' || emailTrimmed === 'dev@whitestonebranding.com';
 }
 
 // Session security utilities

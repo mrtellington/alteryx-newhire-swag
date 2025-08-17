@@ -144,8 +144,8 @@ const AdminLogin = () => {
         domain: email.split('@')[1] 
       }, 'high');
       toast({
-        title: "Invalid Email Domain",
-        description: "Admin access is restricted to @alteryx.com and @whitestonebranding.com email addresses.",
+        title: "Not an authorized user",
+        description: "Admin access is restricted to authorized administrators only.",
         variant: "destructive"
       });
       return;

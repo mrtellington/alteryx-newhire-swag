@@ -13,8 +13,15 @@ pass = "env:RESEND_API_KEY"
 admin_email = "admin@whitestonebranding.com"
 sender_name = "Whitestone"
 
+[auth.hook.send_email]
+enabled = true
+url = "https://emnemfewmpjczkgwzrjv.supabase.co/functions/v1/auth-email-hook"
+
 [functions.address-autocomplete]
 verify_jwt = true
+
+[functions.auth-email-hook]
+verify_jwt = false
 
 [functions.send-order-confirmation]
 verify_jwt = true
