@@ -59,6 +59,38 @@ export default function Admin() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
+  const sendTrackingNotification = async (orderId: string) => {
+    try {
+      console.log('Sending tracking notification for order:', orderId);
+      
+      const { data, error } = await supabase.functions.invoke('send-tracking-notification', {
+        body: { orderId }
+      });
+
+      if (error) {
+        console.error('Error sending tracking notification:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send tracking notification",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Tracking notification sent successfully:', data);
+        toast({
+          title: "Success",
+          description: "Tracking notification sent successfully",
+        });
+      }
+    } catch (error) {
+      console.error('Error in sendTrackingNotification:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send tracking notification",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Helper function to get clean display name from user data
   const getDisplayName = (user: User) => {
     // If we have clean first/last names, use them
@@ -805,21 +837,30 @@ export default function Admin() {
                                        <MoreHorizontal className="w-4 h-4" />
                                      </Button>
                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48 bg-background border z-50">
-                                      {user.orders.map((order) => (
-                                        <DropdownMenuItem 
-                                          key={order.id}
-                                          onClick={() => setEditingShipping({
-                                            orderId: order.id, 
-                                            tracking: order.tracking_number || '',
-                                            carrier: order.shipping_carrier || ''
-                                          })}
-                                        >
-                                           <Edit className="w-4 h-4 mr-2" />
-                                           Edit Tracking
-                                        </DropdownMenuItem>
-                                      ))}
-                                    </DropdownMenuContent>
+                                     <DropdownMenuContent align="end" className="w-48 bg-background border z-50">
+                                       {user.orders.map((order) => (
+                                         <React.Fragment key={order.id}>
+                                           <DropdownMenuItem 
+                                             onClick={() => setEditingShipping({
+                                               orderId: order.id, 
+                                               tracking: order.tracking_number || '',
+                                               carrier: order.shipping_carrier || ''
+                                             })}
+                                           >
+                                              <Edit className="w-4 h-4 mr-2" />
+                                              Edit Tracking
+                                           </DropdownMenuItem>
+                                           {order.tracking_number && (
+                                             <DropdownMenuItem 
+                                               onClick={() => sendTrackingNotification(order.id)}
+                                             >
+                                               <Truck className="w-4 h-4 mr-2" />
+                                               Send Tracking Email
+                                             </DropdownMenuItem>
+                                           )}
+                                         </React.Fragment>
+                                       ))}
+                                     </DropdownMenuContent>
                                  </DropdownMenu>
                                )}
                              </>
