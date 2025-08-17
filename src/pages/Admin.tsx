@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +36,7 @@ interface User {
 }
 
 export default function Admin() {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -167,30 +169,47 @@ export default function Admin() {
   }, [users, searchQuery]);
 
   const checkAdminAccess = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      window.location.href = "/admin/login";
-      return;
-    }
-
     try {
+      console.log('Checking admin access...');
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        setLoading(false);
+        navigate("/admin/login");
+        return;
+      }
+      
+      if (!session) {
+        console.log('No session found, redirecting to login');
+        setLoading(false);
+        navigate("/admin/login");
+        return;
+      }
+
+      console.log('Session found, checking admin status for:', session.user.email);
+
       // Use the new admin checking function
       const { data: isAdmin, error } = await supabase.rpc('is_user_admin', { 
         user_email: session.user.email 
       });
 
+      console.log('Admin check result:', { isAdmin, error });
+
       if (error) {
         console.error('Error checking admin status:', error);
+        setLoading(false);
         toast({
           title: "Access Denied",
           description: "Unable to verify admin access.",
           variant: "destructive"
         });
-        window.location.href = "/";
+        navigate("/");
         return;
       }
 
       if (!isAdmin) {
+        console.log('User is not admin, logging unauthorized access');
         // Log unauthorized admin access attempt
         await supabase.rpc('log_security_event', {
           event_type: 'unauthorized_admin_access',
@@ -201,15 +220,17 @@ export default function Admin() {
           }
         });
 
+        setLoading(false);
         toast({
           title: "Access Denied",
           description: "You don't have admin access.",
           variant: "destructive"
         });
-        window.location.href = "/";
+        navigate("/");
         return;
       }
 
+      console.log('Admin access confirmed, logging successful access');
       // Log successful admin access
       await supabase.rpc('log_security_event', {
         event_type: 'admin_dashboard_access',
@@ -220,14 +241,16 @@ export default function Admin() {
       });
 
       setCurrentUser(session.user);
+      console.log('Admin access check complete, proceeding to fetch data');
     } catch (error) {
       console.error('Error in admin access check:', error);
+      setLoading(false);
       toast({
         title: "Access Denied",
         description: "System error during admin verification.",
         variant: "destructive"
       });
-      window.location.href = "/";
+      navigate("/");
     }
   };
 
