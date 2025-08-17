@@ -254,15 +254,6 @@ export default function Admin() {
         orders: Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : []
       }));
       
-      // Debug logging
-      console.log("Fetched users data:", usersData);
-      console.log("Transformed users:", transformedUsers);
-      transformedUsers.forEach(user => {
-        if (user.order_submitted) {
-          console.log(`User ${user.email} orders:`, user.orders);
-        }
-      });
-      
       setUsers(transformedUsers);
       setFilteredUsers(transformedUsers);
     } catch (error) {
