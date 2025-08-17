@@ -68,6 +68,25 @@ export const secureAddressSchema = z
     return !suspiciousPatterns.some(pattern => pattern.test(address));
   }, "Address contains invalid characters");
 
+export const secureOptionalAddressSchema = z
+  .string()
+  .max(100, "Address is too long")
+  .transform((address) => address.trim())
+  .refine((address) => {
+    // Skip validation if empty
+    if (!address || address.length === 0) return true;
+    // Check for suspicious patterns
+    const suspiciousPatterns = [
+      /<[^>]*>/g, // HTML tags
+      /javascript:/i,
+      /data:/i,
+      /on\w+\s*=/i,
+      /script/i
+    ];
+    return !suspiciousPatterns.some(pattern => pattern.test(address));
+  }, "Address contains invalid characters")
+  .optional();
+
 // Rate limiting utilities
 export class RateLimiter {
   private attempts: Map<string, { count: number; lastAttempt: number }> = new Map();

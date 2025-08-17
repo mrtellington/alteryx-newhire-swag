@@ -13,7 +13,8 @@ import AddressAutocomplete, { NormalizedAddress } from "@/components/AddressAuto
 import { 
   secureNameSchema, 
   securePhoneSchema, 
-  secureAddressSchema, 
+  secureAddressSchema,
+  secureOptionalAddressSchema,
   logSecurityEvent,
   sanitizeInput,
   initializeSecureSession 
@@ -30,7 +31,7 @@ const addressSchema = z
     first_name: secureNameSchema,
     last_name: secureNameSchema,
     line1: secureAddressSchema,
-    line2: secureAddressSchema.optional(),
+    line2: secureOptionalAddressSchema,
     city: z.string().min(2, "City is required").max(50, "City name is too long")
       .transform(sanitizeInput),
     region: z.string().min(2, "Region/State is required").max(50, "Region name is too long")
