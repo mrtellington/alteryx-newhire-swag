@@ -87,9 +87,19 @@ export default function Admin() {
   };
 
   useEffect(() => {
-    checkAdminAccess();
-    fetchUsers();
+    const initAdmin = async () => {
+      await checkAdminAccess();
+      // Only fetch users if admin access was successful (currentUser will be set)
+    };
+    initAdmin();
   }, []);
+
+  // Separate useEffect to fetch users after admin check is complete
+  useEffect(() => {
+    if (currentUser) {
+      fetchUsers();
+    }
+  }, [currentUser]);
 
   // Sort function
   const sortUsers = (field: keyof User | 'name' | 'orderDate') => {
