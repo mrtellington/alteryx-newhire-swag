@@ -732,11 +732,11 @@ export default function Admin() {
                                      </span>
                                    )}
                                    
-                                   {order.status === 'shipped' && order.tracking_number && (
+                                   {order.tracking_number && (
                                      <TooltipProvider>
                                        <Tooltip>
                                          <TooltipTrigger>
-                                           <Truck className="w-4 h-4 text-green-600" />
+                                           <Truck className="w-4 h-4 text-muted-foreground" />
                                          </TooltipTrigger>
                                          <TooltipContent className="bg-background border shadow-lg">
                                            <div className="text-xs space-y-1">
