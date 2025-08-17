@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon } from "lucide-react";
+import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal } from "lucide-react";
 import AdminManagement from "@/components/AdminManagement";
 
 interface User {
@@ -745,134 +746,92 @@ export default function Admin() {
                       </TableCell>
                         <TableCell>
                           {user.orders && user.orders.length > 0 ? (
-                            <div className="text-sm space-y-1">
+                            <div className="text-sm space-y-2">
                                {user.orders.map((order, index) => (
-                                 <div key={order.id} className="border-b border-muted pb-1 last:border-b-0 last:pb-0">
-                                   <div>{new Date(order.date_submitted).toLocaleDateString()}</div>
-                                   <div className="text-muted-foreground">{order.order_number}</div>
-                                   <div className="mt-1 space-y-1">
+                                 <div key={order.id} className="border-b border-muted pb-2 last:border-b-0 last:pb-0">
+                                   <div className="font-medium">{new Date(order.date_submitted).toLocaleDateString()}</div>
+                                   <div className="text-muted-foreground text-xs">{order.order_number}</div>
+                                   
+                                   <div className="flex flex-wrap gap-1 mt-1">
                                      {order.tee_size ? (
-                                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded inline-block font-medium">
+                                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
                                          Size: {order.tee_size}
                                        </span>
                                      ) : (
-                                       <span className="text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded inline-block">
-                                         No size recorded
+                                       <span className="text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded">
+                                         No size
                                        </span>
                                      )}
-                                     <div className="flex items-center gap-1">
-                                       {editingTracking?.orderId === order.id ? (
-                                         <div className="flex items-center gap-1">
-                                           <input
-                                             type="text"
-                                             value={editingTracking.value}
-                                             onChange={(e) => setEditingTracking({orderId: order.id, value: e.target.value})}
-                                             onKeyDown={(e) => {
-                                               if (e.key === 'Enter') {
-                                                 updateTrackingNumber(order.id, editingTracking.value);
-                                               } else if (e.key === 'Escape') {
-                                                 setEditingTracking(null);
-                                               }
-                                             }}
-                                             placeholder="Tracking number"
-                                             className="text-xs px-2 py-1 border rounded w-32"
-                                             autoFocus
-                                           />
-                                           <Button
-                                             size="sm"
-                                             variant="ghost"
-                                             onClick={() => updateTrackingNumber(order.id, editingTracking.value)}
-                                             className="h-6 px-2"
-                                           >
-                                             Save
-                                           </Button>
-                                         </div>
-                                       ) : (
-                                         <div className="flex items-center gap-1">
-                                           {order.tracking_number ? (
-                                             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded inline-block font-medium">
-                                               Tracking: {order.tracking_number}
-                                             </span>
-                                           ) : (
-                                             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded inline-block">
-                                               No tracking
-                                             </span>
-                                           )}
-                                           <Button
-                                             size="sm"
-                                             variant="ghost"
-                                             onClick={() => setEditingTracking({orderId: order.id, value: order.tracking_number || ''})}
-                                             className="h-6 px-1"
-                                           >
-                                             <Edit className="w-3 h-3" />
-                                           </Button>
-                                         </div>
-                                        )}
-                                      </div>
-                                      <div className="flex items-center gap-1">
-                                       {editingCarrier?.orderId === order.id ? (
-                                         <div className="flex items-center gap-1">
-                                           <Select
-                                             value={editingCarrier.value}
-                                             onValueChange={(value) => setEditingCarrier({orderId: order.id, value})}
-                                           >
-                                             <SelectTrigger className="w-32 h-6 text-xs">
-                                               <SelectValue placeholder="Select carrier" />
-                                             </SelectTrigger>
-                                             <SelectContent className="bg-background z-50">
-                                               <SelectItem value="Fedex">Fedex</SelectItem>
-                                               <SelectItem value="Other">Other</SelectItem>
-                                             </SelectContent>
-                                           </Select>
-                                           <Button
-                                             size="sm"
-                                             variant="ghost"
-                                             onClick={() => updateShippingCarrier(order.id, editingCarrier.value)}
-                                             className="h-6 px-2"
-                                           >
-                                             Save
-                                           </Button>
-                                         </div>
-                                       ) : (
-                                         <div className="flex items-center gap-1">
-                                           {order.shipping_carrier ? (
-                                             <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded inline-block font-medium">
-                                               {order.shipping_carrier}
-                                             </span>
-                                           ) : (
-                                             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded inline-block">
-                                               No carrier
-                                             </span>
-                                           )}
-                                           <Button
-                                             size="sm"
-                                             variant="ghost"
-                                             onClick={() => setEditingCarrier({orderId: order.id, value: order.shipping_carrier || ''})}
-                                             className="h-6 px-1"
-                                           >
-                                             <Edit className="w-3 h-3" />
-                                           </Button>
-                                         </div>
-                                       )}
-                                     </div>
+                                     
+                                     {order.tracking_number ? (
+                                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                         {order.tracking_number}
+                                       </span>
+                                     ) : (
+                                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                         No tracking
+                                       </span>
+                                     )}
+                                     
+                                     {order.shipping_carrier ? (
+                                       <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
+                                         {order.shipping_carrier}
+                                       </span>
+                                     ) : (
+                                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                         No carrier
+                                       </span>
+                                     )}
                                    </div>
                                  </div>
                                ))}
                             </div>
                           ) : "-"}
                         </TableCell>
-                      <TableCell>
-                        {user.order_submitted && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => resetOrderPermission(user.id)}
-                          >
-                            <RotateCcw className="w-4 h-4 mr-1" />
-                            Reset
-                          </Button>
-                        )}
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex items-center gap-2">
+                           {user.order_submitted && (
+                             <>
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={() => resetOrderPermission(user.id)}
+                               >
+                                 <RotateCcw className="w-4 h-4 mr-1" />
+                                 Reset
+                               </Button>
+                               
+                               {user.orders && user.orders.length > 0 && (
+                                 <DropdownMenu>
+                                   <DropdownMenuTrigger asChild>
+                                     <Button variant="outline" size="sm">
+                                       <MoreHorizontal className="w-4 h-4" />
+                                     </Button>
+                                   </DropdownMenuTrigger>
+                                   <DropdownMenuContent align="end" className="w-48">
+                                     {user.orders.map((order) => (
+                                       <div key={order.id}>
+                                         <DropdownMenuItem 
+                                           onClick={() => setEditingTracking({orderId: order.id, value: order.tracking_number || ''})}
+                                         >
+                                           <Edit className="w-4 h-4 mr-2" />
+                                           Edit Tracking
+                                         </DropdownMenuItem>
+                                         <DropdownMenuItem 
+                                           onClick={() => setEditingCarrier({orderId: order.id, value: order.shipping_carrier || ''})}
+                                         >
+                                           <Edit className="w-4 h-4 mr-2" />
+                                           Edit Carrier
+                                         </DropdownMenuItem>
+                                       </div>
+                                     ))}
+                                   </DropdownMenuContent>
+                                 </DropdownMenu>
+                               )}
+                             </>
+                           )}
+                         </div>
+                       </TableCell>
                     </TableRow>
                   );
                 })}
@@ -886,6 +845,79 @@ export default function Admin() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Tracking Number Edit Dialog */}
+      <Dialog open={!!editingTracking} onOpenChange={() => setEditingTracking(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Tracking Number</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="tracking">Tracking Number</Label>
+              <Input
+                id="tracking"
+                value={editingTracking?.value || ''}
+                onChange={(e) => setEditingTracking(prev => prev ? {...prev, value: e.target.value} : null)}
+                placeholder="Enter tracking number"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setEditingTracking(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                if (editingTracking) {
+                  updateTrackingNumber(editingTracking.orderId, editingTracking.value);
+                }
+              }}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shipping Carrier Edit Dialog */}
+      <Dialog open={!!editingCarrier} onOpenChange={() => setEditingCarrier(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Shipping Carrier</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="carrier">Shipping Carrier</Label>
+              <Select
+                value={editingCarrier?.value || ''}
+                onValueChange={(value) => setEditingCarrier(prev => prev ? {...prev, value} : null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select carrier" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="FedEx">FedEx</SelectItem>
+                  <SelectItem value="UPS">UPS</SelectItem>
+                  <SelectItem value="USPS">USPS</SelectItem>
+                  <SelectItem value="DHL">DHL</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setEditingCarrier(null)}>
+                Cancel
+              </Button>
+              <Button onClick={() => {
+                if (editingCarrier) {
+                  updateShippingCarrier(editingCarrier.orderId, editingCarrier.value);
+                }
+              }}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
