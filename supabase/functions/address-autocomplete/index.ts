@@ -38,7 +38,9 @@ serve(async (req) => {
   console.log(`Address autocomplete request: ${req.method} from ${req.headers.get('origin') || 'unknown'}`);
 
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
+  console.log(`API Key present: ${apiKey ? 'yes' : 'no'}`);
   if (!apiKey) {
+    console.error("GOOGLE_PLACES_API_KEY environment variable is missing");
     return new Response(JSON.stringify({ error: "Missing GOOGLE_PLACES_API_KEY" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -46,9 +48,12 @@ serve(async (req) => {
   }
 
   try {
-    const { type, input, place_id, sessiontoken } = await req.json();
+    const body = await req.json();
+    console.log('Request body:', JSON.stringify(body));
+    const { type, input, place_id, sessiontoken } = body;
 
     if (type === "autocomplete") {
+      console.log(`Autocomplete request for: "${input}"`);
       const url = new URL("https://maps.googleapis.com/maps/api/place/autocomplete/json");
       url.searchParams.set("input", input ?? "");
       url.searchParams.set("types", "address");
@@ -57,6 +62,7 @@ serve(async (req) => {
 
       const resp = await fetch(url.toString());
       const data = await resp.json();
+      console.log(`Google API response status: ${data.status}`);
       if (data.status !== "OK" && data.status !== "ZERO_RESULTS") {
         console.error("Places Autocomplete error", data);
         return new Response(JSON.stringify({ error: data.status, message: data.error_message }), {
@@ -68,6 +74,7 @@ serve(async (req) => {
         description: p.description as string,
         place_id: p.place_id as string,
       }));
+      console.log(`Returning ${results.length} autocomplete results`);
       return new Response(JSON.stringify({ results }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

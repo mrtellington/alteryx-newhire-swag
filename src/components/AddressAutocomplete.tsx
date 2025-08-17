@@ -39,13 +39,24 @@ export default function AddressAutocomplete({ onSelect }: AddressAutocompletePro
     debounceRef.current = window.setTimeout(async () => {
       try {
         setLoading(true);
+        console.log('Making address autocomplete request for:', query);
         const { data, error } = await supabase.functions.invoke("address-autocomplete", {
           body: { type: "autocomplete", input: query, sessiontoken },
         });
-        if (error) throw error;
+        console.log('Address autocomplete response:', { data, error });
+        if (error) {
+          console.error('Supabase function error:', error);
+          throw error;
+        }
         setSuggestions((data as any)?.results ?? []);
       } catch (e: any) {
-        console.error(e);
+        console.error('Address autocomplete error:', e);
+        toast({
+          title: "Address search failed", 
+          description: "Unable to search addresses. Please try entering manually.",
+          variant: "destructive"
+        });
+        setSuggestions([]);
       } finally {
         setLoading(false);
       }
@@ -55,17 +66,27 @@ export default function AddressAutocomplete({ onSelect }: AddressAutocompletePro
 
   const handlePick = async (s: Suggestion) => {
     try {
+      console.log('Getting place details for:', s.place_id);
       const { data, error } = await supabase.functions.invoke("address-autocomplete", {
         body: { type: "details", place_id: s.place_id, sessiontoken },
       });
-      if (error) throw error;
+      console.log('Place details response:', { data, error });
+      if (error) {
+        console.error('Supabase function error for details:', error);
+        throw error;
+      }
       const addr = (data as any)?.address as NormalizedAddress | undefined;
-      if (!addr) throw new Error("No address returned");
+      if (!addr) {
+        console.error('No address returned from details call');
+        throw new Error("No address returned");
+      }
+      console.log('Setting address:', addr);
       setQuery(s.description);
       setSuggestions([]);
       setLocked(true);
       onSelect(addr);
     } catch (e: any) {
+      console.error('handlePick error:', e);
       toast({ title: "Address lookup failed", description: e.message || "Try entering manually" });
     }
   };
