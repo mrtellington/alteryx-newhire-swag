@@ -51,8 +51,7 @@ export default function Admin() {
     phone: ""
   });
   const [csvFile, setCsvFile] = useState<File | null>(null);
-  const [editingTracking, setEditingTracking] = useState<{orderId: string, value: string} | null>(null);
-  const [editingCarrier, setEditingCarrier] = useState<{orderId: string, value: string} | null>(null);
+  const [editingShipping, setEditingShipping] = useState<{orderId: string, tracking: string, carrier: string} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
@@ -318,18 +317,22 @@ export default function Admin() {
     }
   };
 
-  const updateTrackingNumber = async (orderId: string, trackingNumber: string) => {
+
+  const updateShippingInfo = async (orderId: string, trackingNumber: string, shippingCarrier: string) => {
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ tracking_number: trackingNumber })
+        .update({ 
+          tracking_number: trackingNumber,
+          shipping_carrier: shippingCarrier 
+        })
         .eq('id', orderId);
 
       if (error) {
-        console.error('Error updating tracking number:', error);
+        console.error('Error updating shipping info:', error);
         toast({
           title: "Error",
-          description: "Failed to update tracking number",
+          description: "Failed to update shipping information",
           variant: "destructive"
         });
         return;
@@ -337,50 +340,16 @@ export default function Admin() {
 
       toast({
         title: "Success",
-        description: "Tracking number updated successfully"
+        description: "Shipping information updated successfully"
       });
 
       fetchUsers();
-      setEditingTracking(null);
+      setEditingShipping(null);
     } catch (error) {
-      console.error('Error updating tracking number:', error);
+      console.error('Error updating shipping info:', error);
       toast({
         title: "Error",
-        description: "Failed to update tracking number",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const updateShippingCarrier = async (orderId: string, shippingCarrier: string) => {
-    try {
-      const { error } = await supabase
-        .from('orders')
-        .update({ shipping_carrier: shippingCarrier })
-        .eq('id', orderId);
-
-      if (error) {
-        console.error('Error updating shipping carrier:', error);
-        toast({
-          title: "Error",
-          description: "Failed to update shipping carrier",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      toast({
-        title: "Success",
-        description: "Shipping carrier updated successfully"
-      });
-
-      fetchUsers();
-      setEditingCarrier(null);
-    } catch (error) {
-      console.error('Error updating tracking number:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update tracking number",
+        description: "Failed to update shipping information",
         variant: "destructive"
       });
     }
@@ -808,24 +777,21 @@ export default function Admin() {
                                        <MoreHorizontal className="w-4 h-4" />
                                      </Button>
                                    </DropdownMenuTrigger>
-                                   <DropdownMenuContent align="end" className="w-48">
-                                     {user.orders.map((order) => (
-                                       <div key={order.id}>
-                                         <DropdownMenuItem 
-                                           onClick={() => setEditingTracking({orderId: order.id, value: order.tracking_number || ''})}
-                                         >
-                                           <Edit className="w-4 h-4 mr-2" />
-                                           Edit Tracking
-                                         </DropdownMenuItem>
-                                         <DropdownMenuItem 
-                                           onClick={() => setEditingCarrier({orderId: order.id, value: order.shipping_carrier || ''})}
-                                         >
-                                           <Edit className="w-4 h-4 mr-2" />
-                                           Edit Carrier
-                                         </DropdownMenuItem>
-                                       </div>
-                                     ))}
-                                   </DropdownMenuContent>
+                                    <DropdownMenuContent align="end" className="w-48 bg-background border z-50">
+                                      {user.orders.map((order) => (
+                                        <DropdownMenuItem 
+                                          key={order.id}
+                                          onClick={() => setEditingShipping({
+                                            orderId: order.id, 
+                                            tracking: order.tracking_number || '',
+                                            carrier: order.shipping_carrier || ''
+                                          })}
+                                        >
+                                          <Edit className="w-4 h-4 mr-2" />
+                                          Edit Shipping
+                                        </DropdownMenuItem>
+                                      ))}
+                                    </DropdownMenuContent>
                                  </DropdownMenu>
                                )}
                              </>
@@ -846,50 +812,18 @@ export default function Admin() {
         </CardContent>
       </Card>
 
-      {/* Tracking Number Edit Dialog */}
-      <Dialog open={!!editingTracking} onOpenChange={() => setEditingTracking(null)}>
+      {/* Combined Shipping Info Edit Dialog */}
+      <Dialog open={!!editingShipping} onOpenChange={() => setEditingShipping(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Tracking Number</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="tracking">Tracking Number</Label>
-              <Input
-                id="tracking"
-                value={editingTracking?.value || ''}
-                onChange={(e) => setEditingTracking(prev => prev ? {...prev, value: e.target.value} : null)}
-                placeholder="Enter tracking number"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setEditingTracking(null)}>
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                if (editingTracking) {
-                  updateTrackingNumber(editingTracking.orderId, editingTracking.value);
-                }
-              }}>
-                Save
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Shipping Carrier Edit Dialog */}
-      <Dialog open={!!editingCarrier} onOpenChange={() => setEditingCarrier(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Shipping Carrier</DialogTitle>
+            <DialogTitle>Edit Shipping Information</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="carrier">Shipping Carrier</Label>
               <Select
-                value={editingCarrier?.value || ''}
-                onValueChange={(value) => setEditingCarrier(prev => prev ? {...prev, value} : null)}
+                value={editingShipping?.carrier || ''}
+                onValueChange={(value) => setEditingShipping(prev => prev ? {...prev, carrier: value} : null)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select carrier" />
@@ -903,13 +837,22 @@ export default function Admin() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <Label htmlFor="tracking">Tracking Number</Label>
+              <Input
+                id="tracking"
+                value={editingShipping?.tracking || ''}
+                onChange={(e) => setEditingShipping(prev => prev ? {...prev, tracking: e.target.value} : null)}
+                placeholder="Enter tracking number"
+              />
+            </div>
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setEditingCarrier(null)}>
+              <Button variant="outline" onClick={() => setEditingShipping(null)}>
                 Cancel
               </Button>
               <Button onClick={() => {
-                if (editingCarrier) {
-                  updateShippingCarrier(editingCarrier.orderId, editingCarrier.value);
+                if (editingShipping) {
+                  updateShippingInfo(editingShipping.orderId, editingShipping.tracking, editingShipping.carrier);
                 }
               }}>
                 Save
