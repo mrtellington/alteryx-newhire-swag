@@ -68,7 +68,7 @@ export const AdminMagicLinkEmail = ({
             Alteryx New Hire Store
           </Link>
           <br />
-          Whitestone Branding
+          — Whitestone
         </Text>
       </Container>
     </Body>

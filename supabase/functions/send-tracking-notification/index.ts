@@ -125,6 +125,7 @@ const handler = async (req: Request): Promise<Response> => {
         trackingNumber: order.tracking_number,
         shippingCarrier: order.shipping_carrier,
         shippingAddress: shippingHtml,
+        teeSize: order.tee_size,
       })
     );
 

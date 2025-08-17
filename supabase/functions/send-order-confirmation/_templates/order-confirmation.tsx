@@ -101,7 +101,8 @@ export const OrderConfirmationEmail = ({
         )}
         
         <Text style={footer}>
-          — Whitestone Branding
+          — Whitestone<br/>
+          Alteryx New Hire Store
         </Text>
       </Container>
     </Body>

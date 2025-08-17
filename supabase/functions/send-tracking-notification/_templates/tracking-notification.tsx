@@ -18,6 +18,7 @@ interface TrackingNotificationEmailProps {
   trackingNumber: string
   shippingCarrier?: string
   shippingAddress: string
+  teeSize?: string
 }
 
 const generateTrackingLink = (trackingNumber: string, carrier?: string) => {
@@ -42,6 +43,7 @@ export const TrackingNotificationEmail = ({
   trackingNumber,
   shippingCarrier,
   shippingAddress,
+  teeSize,
 }: TrackingNotificationEmailProps) => {
   const trackingLink = generateTrackingLink(trackingNumber, shippingCarrier);
   const firstName = customerName.split(' ')[0] || customerName;
@@ -96,7 +98,7 @@ export const TrackingNotificationEmail = ({
               • Alteryx hat<br/>
               • Alteryx stickers<br/>
               • Alteryx water bottle<br/>
-              • Alteryx t-shirt
+              • Alteryx t-shirt{teeSize ? ` (size: ${teeSize})` : ''}
             </Text>
           </Section>
           
@@ -112,7 +114,7 @@ export const TrackingNotificationEmail = ({
           </Text>
           
           <Text style={footer}>
-            — Whitestone Branding<br/>
+            — Whitestone<br/>
             Alteryx New Hire Store
           </Text>
         </Container>
