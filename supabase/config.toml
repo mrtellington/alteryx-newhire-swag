@@ -26,5 +26,8 @@ verify_jwt = false
 [functions.send-order-confirmation]
 verify_jwt = true
 
+[functions.send-tracking-notification]
+verify_jwt = true
+
 [functions.cognito-webhook]
 verify_jwt = false
