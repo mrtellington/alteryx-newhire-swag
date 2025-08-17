@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal } from "lucide-react";
+import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal, Truck } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdminManagement from "@/components/AdminManagement";
 
 interface User {
@@ -29,6 +30,7 @@ interface User {
     tee_size: string | null;
     tracking_number?: string | null;
     shipping_carrier?: string | null;
+    status?: string | null;
   }>;
 }
 
@@ -241,7 +243,8 @@ export default function Admin() {
             date_submitted,
             tee_size,
             tracking_number,
-            shipping_carrier
+            shipping_carrier,
+            status
           )
         `)
         .order("created_at", { ascending: false });
@@ -715,43 +718,35 @@ export default function Admin() {
                       </TableCell>
                         <TableCell>
                           {user.orders && user.orders.length > 0 ? (
-                            <div className="text-sm space-y-2">
+                            <div className="text-sm space-y-1">
                                {user.orders.map((order, index) => (
-                                 <div key={order.id} className="border-b border-muted pb-2 last:border-b-0 last:pb-0">
-                                   <div className="font-medium">{new Date(order.date_submitted).toLocaleDateString()}</div>
-                                   <div className="text-muted-foreground text-xs">{order.order_number}</div>
-                                   
-                                   <div className="flex flex-wrap gap-1 mt-1">
-                                     {order.tee_size ? (
-                                       <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                                         Size: {order.tee_size}
-                                       </span>
-                                     ) : (
-                                       <span className="text-xs bg-muted/50 text-muted-foreground px-2 py-1 rounded">
-                                         No size
-                                       </span>
-                                     )}
-                                     
-                                     {order.tracking_number ? (
-                                       <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                                         {order.tracking_number}
-                                       </span>
-                                     ) : (
-                                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                         No tracking
-                                       </span>
-                                     )}
-                                     
-                                     {order.shipping_carrier ? (
-                                       <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                                         {order.shipping_carrier}
-                                       </span>
-                                     ) : (
-                                       <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                         No carrier
-                                       </span>
-                                     )}
+                                 <div key={order.id} className="flex items-center gap-2">
+                                   <div className="flex flex-col">
+                                     <div className="font-medium">{new Date(order.date_submitted).toLocaleDateString()}</div>
+                                     <div className="text-muted-foreground text-xs">{order.order_number}</div>
                                    </div>
+                                   
+                                   {order.tee_size && (
+                                     <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                                       {order.tee_size}
+                                     </span>
+                                   )}
+                                   
+                                   {order.status === 'shipped' && order.tracking_number && (
+                                     <TooltipProvider>
+                                       <Tooltip>
+                                         <TooltipTrigger>
+                                           <Truck className="w-4 h-4 text-green-600" />
+                                         </TooltipTrigger>
+                                         <TooltipContent className="bg-background border shadow-lg">
+                                           <div className="text-xs space-y-1">
+                                             <div><strong>Carrier:</strong> {order.shipping_carrier || 'Not specified'}</div>
+                                             <div><strong>Tracking:</strong> {order.tracking_number}</div>
+                                           </div>
+                                         </TooltipContent>
+                                       </Tooltip>
+                                     </TooltipProvider>
+                                   )}
                                  </div>
                                ))}
                             </div>
@@ -787,8 +782,8 @@ export default function Admin() {
                                             carrier: order.shipping_carrier || ''
                                           })}
                                         >
-                                          <Edit className="w-4 h-4 mr-2" />
-                                          Edit Shipping
+                                           <Edit className="w-4 h-4 mr-2" />
+                                           Edit Tracking
                                         </DropdownMenuItem>
                                       ))}
                                     </DropdownMenuContent>
@@ -816,7 +811,7 @@ export default function Admin() {
       <Dialog open={!!editingShipping} onOpenChange={() => setEditingShipping(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Shipping Information</DialogTitle>
+            <DialogTitle>Edit Tracking</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
