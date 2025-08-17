@@ -7,6 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Shield, ArrowLeft } from "lucide-react";
+import { 
+  secureEmailSchema, 
+  logSecurityEvent, 
+  RateLimiter,
+  isValidAdminEmail,
+  initializeSecureSession 
+} from "@/lib/security";
+
+// Initialize rate limiter for admin login attempts
+const adminRateLimiter = new RateLimiter(3, 15 * 60 * 1000); // 3 attempts per 15 minutes
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -16,6 +26,9 @@ const AdminLogin = () => {
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
 
   useEffect(() => {
+    // Initialize secure session
+    initializeSecureSession();
+    
     // SEO
     document.title = "Admin Login | Alteryx New Hire Store";
     const meta = (document.querySelector('meta[name="description"]') as HTMLMetaElement | null) ?? (() => {
@@ -108,25 +121,47 @@ const AdminLogin = () => {
     }
   }, [lastAttempt, cooldownSeconds]);
 
-  const isValidAdminEmail = (email: string) => {
-    const emailTrimmed = email.trim().toLowerCase();
-    return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
-  };
 
   const handleAdminLogin = async () => {
-    if (!email) {
+    // Validate email format
+    try {
+      secureEmailSchema.parse(email);
+    } catch (error) {
+      await logSecurityEvent('admin_login_invalid_email_format', { 
+        email: email.substring(0, 20) + '...' 
+      });
       toast({
-        title: "Email Required",
-        description: "Please enter your admin email address.",
+        title: "Invalid Email Format",
+        description: "Please enter a valid email address.",
         variant: "destructive"
       });
       return;
     }
 
     if (!isValidAdminEmail(email)) {
+      await logSecurityEvent('admin_login_invalid_domain', { 
+        email: email.substring(0, 20) + '...',
+        domain: email.split('@')[1] 
+      }, 'high');
       toast({
         title: "Invalid Email Domain",
         description: "Admin access is restricted to @alteryx.com and @whitestonebranding.com email addresses.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check rate limiting
+    const rateCheck = adminRateLimiter.checkRateLimit(email);
+    if (!rateCheck.allowed) {
+      const remainingMinutes = Math.ceil((rateCheck.remainingTime || 0) / 60000);
+      await logSecurityEvent('admin_login_rate_limit_exceeded', { 
+        email: email.substring(0, 20) + '...',
+        remainingMinutes 
+      }, 'high');
+      toast({
+        title: "Rate Limited",
+        description: `Too many admin login attempts. Please wait ${remainingMinutes} minutes.`,
         variant: "destructive"
       });
       return;
@@ -164,6 +199,9 @@ const AdminLogin = () => {
           });
         }
       } else {
+        await logSecurityEvent('admin_login_magic_link_sent', { 
+          email: email.substring(0, 20) + '...' 
+        });
         toast({
           title: "Magic Link Sent",
           description: `A secure login link has been sent to ${email}. Check your inbox and click the link to access the admin dashboard.`,

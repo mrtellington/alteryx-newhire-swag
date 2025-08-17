@@ -1,7 +1,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { getData as getCountryData } from "country-list";
 import AddressAutocomplete, { NormalizedAddress } from "@/components/AddressAutocomplete";
+import { 
+  secureNameSchema, 
+  securePhoneSchema, 
+  secureAddressSchema, 
+  logSecurityEvent,
+  sanitizeInput,
+  initializeSecureSession 
+} from "@/lib/security";
 
 const postalCodePatterns: Record<string, RegExp> = {
   US: /^\d{5}(-\d{4})?$/,
@@ -19,18 +27,18 @@ const postalCodePatterns: Record<string, RegExp> = {
 
 const addressSchema = z
   .object({
-    first_name: z.string().min(1, "First name is required"),
-    last_name: z.string().min(1, "Last name is required"),
-    line1: z.string().min(3, "Address line 1 is required"),
-    line2: z.string().optional(),
-    city: z.string().min(2, "City is required"),
-    region: z.string().min(2, "Region/State is required"),
-    postal_code: z.string().min(2, "Postal code is required"),
+    first_name: secureNameSchema,
+    last_name: secureNameSchema,
+    line1: secureAddressSchema,
+    line2: secureAddressSchema.optional(),
+    city: z.string().min(2, "City is required").max(50, "City name is too long")
+      .transform(sanitizeInput),
+    region: z.string().min(2, "Region/State is required").max(50, "Region name is too long")
+      .transform(sanitizeInput),
+    postal_code: z.string().min(2, "Postal code is required").max(20, "Postal code is too long")
+      .transform(sanitizeInput),
     country: z.string().length(2, "Select a country"), // ISO Alpha-2 code
-    phone: z
-      .string()
-      .min(7, "Phone number is required")
-      .regex(/^[+]?[-().\s\d]{7,25}$/, "Enter a valid phone number with country code if international"),
+    phone: securePhoneSchema,
   })
   .superRefine((val, ctx) => {
     const pattern = postalCodePatterns[val.country];
@@ -62,6 +70,11 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
   const [submitting, setSubmitting] = useState(false);
   const countries = useMemo(() => {
     return getCountryData().sort((a, b) => a.name.localeCompare(b.name));
+  }, []);
+
+  // Initialize secure session
+  useEffect(() => {
+    initializeSecureSession();
   }, []);
 
   const form = useForm<AddressValues>({
@@ -105,9 +118,18 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
 
   const onSubmit = async (values: AddressValues) => {
     setSubmitting(true);
+    
+    // Log form submission attempt
+    await logSecurityEvent('shipping_form_submission_attempt', {
+      country: values.country,
+      hasPhone: Boolean(values.phone),
+      sessionId: sessionStorage.getItem('session_id')
+    });
+
     try {
       const { data: userRes, error: userErr } = await supabase.auth.getUser();
       if (userErr || !userRes.user) {
+        await logSecurityEvent('shipping_form_auth_failure', { error: userErr?.message }, 'high');
         throw new Error(userErr?.message || "Not authenticated");
       }
       const userId = userRes.user.id;
@@ -138,11 +160,24 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
         .invoke("send-order-confirmation", { body: { orderId: orderIdStr } })
         .catch((e) => console.error("send-order-confirmation failed", e));
 
+      await logSecurityEvent('order_placed_successfully', {
+        orderId: orderIdStr,
+        country: values.country,
+        teeSize: selectedSize
+      });
+      
       toast({ title: "Order placed!", description: "Your claim was successful. A confirmation email is on its way." });
       onSuccess?.(orderIdStr);
       form.reset();
     } catch (e: any) {
       const msg = e?.message || "Something went wrong";
+      
+      await logSecurityEvent('order_placement_failed', {
+        error: msg,
+        country: values.country,
+        teeSize: selectedSize
+      }, 'high');
+      
       toast({ title: "Unable to place order", description: msg });
     } finally {
       setSubmitting(false);

@@ -189,19 +189,7 @@ export type Database = {
       }
     }
     Views: {
-      security_dashboard: {
-        Row: {
-          event_count: number | null
-          event_type: string | null
-          first_occurrence: string | null
-          last_occurrence: string | null
-          severity:
-            | Database["public"]["Enums"]["security_event_severity"]
-            | null
-          unique_users: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       check_suspicious_activity: {
@@ -247,6 +235,17 @@ export type Database = {
       get_current_user_admin_status: {
         Args: Record<PropertyKey, never>
         Returns: boolean
+      }
+      get_security_dashboard: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          event_count: number
+          event_type: string
+          first_occurrence: string
+          last_occurrence: string
+          severity: Database["public"]["Enums"]["security_event_severity"]
+          unique_users: number
+        }[]
       }
       is_user_admin: {
         Args: { user_email?: string }

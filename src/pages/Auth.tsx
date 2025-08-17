@@ -8,11 +8,16 @@ import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle } from "lucide-react";
+import { 
+  secureEmailSchema, 
+  logSecurityEvent, 
+  RateLimiter, 
+  isAllowedEmailDomain,
+  initializeSecureSession 
+} from "@/lib/security";
 
-const isAllowedEmail = (email: string) => {
-  const emailTrimmed = email.trim().toLowerCase();
-  return emailTrimmed === 'tod.ellington@gmail.com' || /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
-};
+// Initialize rate limiter for magic link requests
+const rateLimiter = new RateLimiter(3, 10 * 60 * 1000); // 3 attempts per 10 minutes
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -26,6 +31,9 @@ const Auth = () => {
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
 
   useEffect(() => {
+    // Initialize secure session
+    initializeSecureSession();
+    
     // SEO
     document.title = "Sign In | Alteryx New Hire Store";
     const meta = (document.querySelector('meta[name="description"]') as HTMLMetaElement | null) ?? (() => {
@@ -101,12 +109,40 @@ const Auth = () => {
   }, [cooldownSeconds]);
 
   const handleMagicLink = async () => {
-    console.log("handleMagicLink called with email:", email);
-    console.log("Email validation result:", isAllowedEmail(email));
-    
-    if (!isAllowedEmail(email)) {
-      console.log("Email validation failed for:", email);
+    // Validate email format first
+    try {
+      secureEmailSchema.parse(email);
+    } catch (error) {
+      await logSecurityEvent('auth_invalid_email_format', { 
+        email: email.substring(0, 20) + '...', 
+        error: 'Invalid email format' 
+      });
+      toast({ title: "Invalid email format", description: "Please enter a valid email address" });
+      return;
+    }
+
+    if (!isAllowedEmailDomain(email)) {
+      await logSecurityEvent('auth_invalid_domain_attempt', { 
+        email: email.substring(0, 20) + '...',
+        domain: email.split('@')[1] 
+      });
       toast({ title: "Invalid email domain", description: "Use @alteryx.com or @whitestonebranding.com" });
+      return;
+    }
+
+    // Check rate limiting
+    const rateCheck = rateLimiter.checkRateLimit(email);
+    if (!rateCheck.allowed) {
+      const remainingMinutes = Math.ceil((rateCheck.remainingTime || 0) / 60000);
+      await logSecurityEvent('auth_rate_limit_exceeded', { 
+        email: email.substring(0, 20) + '...',
+        remainingMinutes 
+      }, 'medium');
+      toast({ 
+        title: "Rate limit exceeded", 
+        description: `Too many attempts. Please wait ${remainingMinutes} minutes.`,
+        variant: "destructive"
+      });
       return;
     }
     
@@ -197,6 +233,9 @@ const Auth = () => {
       }
     } else {
       console.log("Magic link sent successfully");
+      await logSecurityEvent('auth_magic_link_sent', { 
+        email: email.substring(0, 20) + '...' 
+      });
       toast({ title: "Check your email", description: "We sent you a secure magic link." });
     }
   };
