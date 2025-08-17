@@ -102,31 +102,46 @@ export type Database = {
       }
       security_events: {
         Row: {
+          additional_context: Json | null
           created_at: string
           event_type: string
           id: string
           ip_address: string | null
           metadata: Json | null
+          session_id: string | null
+          severity:
+            | Database["public"]["Enums"]["security_event_severity"]
+            | null
           user_agent: string | null
           user_email: string | null
           user_id: string | null
         }
         Insert: {
+          additional_context?: Json | null
           created_at?: string
           event_type: string
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          session_id?: string | null
+          severity?:
+            | Database["public"]["Enums"]["security_event_severity"]
+            | null
           user_agent?: string | null
           user_email?: string | null
           user_id?: string | null
         }
         Update: {
+          additional_context?: Json | null
           created_at?: string
           event_type?: string
           id?: string
           ip_address?: string | null
           metadata?: Json | null
+          session_id?: string | null
+          severity?:
+            | Database["public"]["Enums"]["security_event_severity"]
+            | null
           user_agent?: string | null
           user_email?: string | null
           user_id?: string | null
@@ -174,9 +189,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      security_dashboard: {
+        Row: {
+          event_count: number | null
+          event_type: string | null
+          first_occurrence: string | null
+          last_occurrence: string | null
+          severity:
+            | Database["public"]["Enums"]["security_event_severity"]
+            | null
+          unique_users: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      check_suspicious_activity: {
+        Args: {
+          event_type_param: string
+          max_events?: number
+          time_window_minutes?: number
+          user_email_param: string
+        }
+        Returns: boolean
+      }
       check_user_order_status: {
         Args: { user_email: string }
         Returns: Json
@@ -216,6 +252,17 @@ export type Database = {
         Args: { user_email?: string }
         Returns: boolean
       }
+      log_detailed_security_event: {
+        Args: {
+          additional_context?: Json
+          event_type: string
+          metadata?: Json
+          session_id?: string
+          severity?: Database["public"]["Enums"]["security_event_severity"]
+          user_id?: string
+        }
+        Returns: undefined
+      }
       log_security_event: {
         Args: { event_type: string; metadata?: Json; user_id?: string }
         Returns: undefined
@@ -224,9 +271,17 @@ export type Database = {
         Args: Record<PropertyKey, never> | { tee_size_param?: string }
         Returns: string
       }
+      validate_and_sanitize_input: {
+        Args: { allow_html?: boolean; input_text: string; max_length?: number }
+        Returns: string
+      }
+      validate_email_domain: {
+        Args: { email_param: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      security_event_severity: "low" | "medium" | "high" | "critical"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -353,6 +408,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      security_event_severity: ["low", "medium", "high", "critical"],
+    },
   },
 } as const
