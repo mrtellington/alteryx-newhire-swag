@@ -224,6 +224,15 @@ const Auth = () => {
           description: "Supabase has rate limited this email. Please wait 1 minute before trying again.",
           variant: "destructive"
         });
+      } else if (error.message.includes("Access denied") || 
+                 error.message.includes("not authorized") || 
+                 error.message.includes("not found in authorized") ||
+                 error.message.includes("Database error saving new user")) {
+        toast({ 
+          title: "This is not a registered email", 
+          description: "Only employees with valid company accounts can access this system.",
+          variant: "destructive"
+        });
       } else {
         toast({ 
           title: "Unable to send link", 
