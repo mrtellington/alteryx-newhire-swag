@@ -466,63 +466,91 @@ export default function Admin() {
         return user;
       });
 
+      let successCount = 0;
+      let errorCount = 0;
+
       for (const user of users) {
         // Handle different possible email column names
         const email = user.email || user.email_address || user.emailaddress;
         
         if (email) {
-          // Handle different possible name column names
-          const firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
-          const lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
-          const fullName = user.full_name || user.fullname || user.name || user.display_name || '';
-          
-          // If we have a full_name but no first/last, try to split it
-          let finalFirstName = firstName;
-          let finalLastName = lastName;
-          let finalFullName = fullName;
-          
-          if (fullName && !firstName && !lastName) {
-            const nameParts = fullName.trim().split(' ');
-            if (nameParts.length >= 2) {
-              finalFirstName = nameParts[0];
-              finalLastName = nameParts.slice(1).join(' ');
-            } else if (nameParts.length === 1) {
-              finalFirstName = nameParts[0];
+          try {
+            // Handle different possible name column names
+            const firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
+            const lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
+            const fullName = user.full_name || user.fullname || user.name || user.display_name || '';
+            
+            // If we have a full_name but no first/last, try to split it
+            let finalFirstName = firstName;
+            let finalLastName = lastName;
+            let finalFullName = fullName;
+            
+            if (fullName && !firstName && !lastName) {
+              const nameParts = fullName.trim().split(' ');
+              if (nameParts.length >= 2) {
+                finalFirstName = nameParts[0];
+                finalLastName = nameParts.slice(1).join(' ');
+              } else if (nameParts.length === 1) {
+                finalFirstName = nameParts[0];
+              }
             }
-          }
-          
-          // Construct full name if not provided
-          if (!finalFullName && (finalFirstName || finalLastName)) {
-            finalFullName = `${finalFirstName} ${finalLastName}`.trim();
-          }
-          
-          const shippingAddress = {
-            address: user.address || user.street_address || user.address_line_1 || '',
-            city: user.city || '',
-            state: user.state || user.province || user.region || '',
-            zip: user.zip || user.zipcode || user.postal_code || user.postcode || '',
-            phone: user.phone || user.phone_number || user.telephone || ''
-          };
+            
+            // Construct full name if not provided
+            if (!finalFullName && (finalFirstName || finalLastName)) {
+              finalFullName = `${finalFirstName} ${finalLastName}`.trim();
+            }
+            
+            const shippingAddress = {
+              address: user.address || user.street_address || user.address_line_1 || '',
+              city: user.city || '',
+              state: user.state || user.province || user.region || '',
+              zip: user.zip || user.zipcode || user.postal_code || user.postcode || '',
+              phone: user.phone || user.phone_number || user.telephone || ''
+            };
 
-          await supabase.functions.invoke("cognito-webhook", {
-            body: {
-              email: email,
-              full_name: finalFullName,
-              first_name: finalFirstName,
-              last_name: finalLastName,
-              shipping_address: shippingAddress
+            console.log(`Importing user: ${email}`, {
+              finalFirstName,
+              finalLastName,
+              finalFullName,
+              shippingAddress
+            });
+
+            const { data, error } = await supabase.functions.invoke("cognito-webhook", {
+              body: {
+                email: email,
+                full_name: finalFullName,
+                first_name: finalFirstName,
+                last_name: finalLastName,
+                shipping_address: shippingAddress
+              }
+            });
+
+            if (error) {
+              console.error(`Error importing user ${email}:`, error);
+              errorCount++;
+            } else {
+              console.log(`Successfully imported user ${email}:`, data);
+              successCount++;
             }
-          });
+          } catch (userError) {
+            console.error(`Error processing user ${email}:`, userError);
+            errorCount++;
+          }
         }
       }
 
       toast({
-        title: "Success",
-        description: `Imported ${users.length} users successfully`
+        title: "Import Complete",
+        description: `Successfully imported ${successCount} users. ${errorCount > 0 ? `${errorCount} errors.` : ''}`
       });
 
       setCsvFile(null);
-      fetchUsers();
+      
+      // Wait a moment for the database to update, then refresh
+      setTimeout(() => {
+        fetchUsers();
+      }, 1000);
+      
     } catch (error) {
       console.error("Error importing CSV:", error);
       toast({
