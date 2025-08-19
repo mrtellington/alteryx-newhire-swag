@@ -149,6 +149,14 @@ export default function Admin() {
           aValue = getDisplayName(a).toLowerCase();
           bValue = getDisplayName(b).toLowerCase();
           break;
+        case 'first_name':
+          aValue = (a.first_name || '').toLowerCase();
+          bValue = (b.first_name || '').toLowerCase();
+          break;
+        case 'last_name':
+          aValue = (a.last_name || '').toLowerCase();
+          bValue = (b.last_name || '').toLowerCase();
+          break;
         case 'orderDate':
           aValue = a.orders?.[0]?.date_submitted || '';
           bValue = b.orders?.[0]?.date_submitted || '';
@@ -770,18 +778,29 @@ export default function Admin() {
                       )}
                     </div>
                   </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 select-none"
-                    onClick={() => sortUsers('name')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Name
-                      {sortField === 'name' && (
-                        sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
-                      )}
-                    </div>
-                  </TableHead>
-                  <TableHead>Address</TableHead>
+                   <TableHead 
+                     className="cursor-pointer hover:bg-muted/50 select-none"
+                     onClick={() => sortUsers('first_name')}
+                   >
+                     <div className="flex items-center gap-1">
+                       First Name
+                       {sortField === 'first_name' && (
+                         sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                       )}
+                     </div>
+                   </TableHead>
+                   <TableHead 
+                     className="cursor-pointer hover:bg-muted/50 select-none"
+                     onClick={() => sortUsers('last_name')}
+                   >
+                     <div className="flex items-center gap-1">
+                       Last Name
+                       {sortField === 'last_name' && (
+                         sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
+                       )}
+                     </div>
+                   </TableHead>
+                   <TableHead>Address</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 select-none"
@@ -814,11 +833,14 @@ export default function Admin() {
                   const order = user.orders?.[0];
                   
                   return (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">{user.email}</TableCell>
-                      <TableCell>
-                        {getDisplayName(user)}
-                      </TableCell>
+                     <TableRow key={user.id}>
+                       <TableCell className="font-medium">{user.email}</TableCell>
+                       <TableCell>
+                         {user.first_name || '-'}
+                       </TableCell>
+                       <TableCell>
+                         {user.last_name || '-'}
+                       </TableCell>
                       <TableCell>
                         {addr.line1 || addr.address ? (
                           <div className="text-sm">
