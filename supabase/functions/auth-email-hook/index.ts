@@ -3,10 +3,16 @@ import { Webhook } from 'https://esm.sh/standardwebhooks@1.0.0'
 import { Resend } from 'npm:resend@4.0.0'
 import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import React from 'npm:react@18.3.1'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { AdminMagicLinkEmail } from './_templates/admin-magic-link.tsx'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
+
+// Initialize Supabase client
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,22 +53,35 @@ serve(async (req) => {
 
     console.log('Auth email hook triggered for:', user.email, 'Action:', email_action_type);
 
-    // Only customize emails for admin access (magic link to /admin path)
-    const isAdminLogin = redirect_to?.includes('/admin') || redirect_to?.includes('admin');
+    // Check if user exists in our database (either as admin or regular user)
+    const { data: adminUser } = await supabase
+      .from('admin_users')
+      .select('email, active')
+      .eq('email', user.email)
+      .single();
+
+    const { data: regularUser } = await supabase
+      .from('users')
+      .select('email, invited')
+      .eq('email', user.email)
+      .single();
+
+    const isAuthorizedUser = (adminUser?.active) || (regularUser?.invited);
     
-    // Check if this is an admin email
-    const isAdminEmail = user.email === 'admin@whitestonebranding.com' || user.email === 'dev@whitestonebranding.com';
-    
-    if (!isAdminEmail) {
-      console.log('Non-admin email attempted:', user.email);
-      // Don't send any email for non-admin emails
-      return new Response(JSON.stringify({ message: 'Not authorized' }), {
+    if (!isAuthorizedUser) {
+      console.log('Unauthorized email attempted:', user.email);
+      // Don't send any email for unauthorized users
+      return new Response(JSON.stringify({ message: 'User not authorized or not found in database' }), {
         status: 403,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
 
-    if (isAdminLogin && email_action_type === 'magiclink') {
+    // Only customize emails for admin access (magic link to /admin path)
+    const isAdminLogin = redirect_to?.includes('/admin') || redirect_to?.includes('admin');
+    const isAdminUser = adminUser?.active;
+
+    if (isAdminLogin && isAdminUser && email_action_type === 'magiclink') {
       console.log('Sending custom admin magic link email to:', user.email);
       
       const html = await renderAsync(
