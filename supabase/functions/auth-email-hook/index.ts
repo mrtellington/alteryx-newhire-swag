@@ -53,54 +53,64 @@ serve(async (req) => {
 
     console.log('Auth email hook triggered for:', user.email, 'Action:', email_action_type);
 
-    // Check if user exists in our database (either as admin or regular user)
+    // Check if user is an active admin
     const { data: adminUser } = await supabase
       .from('admin_users')
       .select('email, active')
       .eq('email', user.email)
+      .eq('active', true)
       .single();
 
+    // Check if user exists in users table and is eligible
     const { data: regularUser } = await supabase
       .from('users')
-      .select('email, invited')
+      .select('email, invited, order_submitted')
       .eq('email', user.email)
+      .eq('invited', true)
+      .eq('order_submitted', false)
       .single();
 
-    const isAuthorizedUser = (adminUser?.active) || (regularUser?.invited);
+    const isActiveAdmin = !!adminUser;
+    const isEligibleUser = !!regularUser;
     
-    if (!isAuthorizedUser) {
-      console.log('Unauthorized email attempted:', user.email);
+    console.log('Auth check for', user.email, '- isActiveAdmin:', isActiveAdmin, 'isEligibleUser:', isEligibleUser);
+    
+    // CRITICAL: Only allow magic links for active admins OR eligible users who haven't ordered
+    if (!isActiveAdmin && !isEligibleUser) {
+      console.log('BLOCKING AUTH REQUEST - User not authorized:', user.email);
       
-      // Disable the user account in auth if it exists
+      // Try to disable any existing auth user to prevent future attempts
       try {
-        const { data: authUser, error: getUserError } = await supabase.auth.admin.getUserByEmail(user.email);
-        if (authUser?.user && !getUserError) {
-          console.log('Disabling unauthorized user account:', user.email);
+        const { data: authUser } = await supabase.auth.admin.getUserByEmail(user.email);
+        if (authUser?.user) {
+          console.log('Disabling unauthorized auth user:', user.email);
           await supabase.auth.admin.updateUserById(authUser.user.id, {
-            user_metadata: { disabled: true, reason: 'Not in authorized user database' }
+            email_confirm: false,
+            user_metadata: { 
+              disabled: true, 
+              reason: 'Not in authorized user database or already ordered',
+              blocked_at: new Date().toISOString()
+            }
           });
         }
       } catch (error) {
-        console.error('Error disabling user:', error);
+        console.error('Error disabling unauthorized user:', error);
       }
       
-      // Return error to block the email
-      return new Response(JSON.stringify({ 
-        error: {
-          http_code: 403,
-          message: 'User not found in authorized user database'
-        }
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      // Return error to block the request completely
+      throw new Error(`Access denied: User ${user.email} is not authorized or has already ordered`);
     }
 
-    // Only customize emails for admin access (magic link to /admin path)
     const isAdminLogin = redirect_to?.includes('/admin') || redirect_to?.includes('admin');
-    const isAdminUser = adminUser?.active;
+    
+    // For admin login, must be an active admin
+    if (isAdminLogin && !isActiveAdmin) {
+      console.log('BLOCKING ADMIN ACCESS - User not an active admin:', user.email);
+      throw new Error(`Access denied: Admin privileges required for ${user.email}`);
+    }
 
-    if (isAdminLogin && isAdminUser && email_action_type === 'magiclink') {
+    // Send custom admin email for admin logins
+    if (isAdminLogin && isActiveAdmin && email_action_type === 'magiclink') {
       console.log('Sending custom admin magic link email to:', user.email);
       
       const html = await renderAsync(
@@ -126,14 +136,24 @@ serve(async (req) => {
       }
       
       console.log('Admin magic link sent successfully to:', user.email);
-    } else {
-      console.log('Standard email flow for:', user.email, 'Action:', email_action_type);
-      // Let Supabase handle other email types normally
-      return new Response(JSON.stringify({ message: 'Standard email flow' }), {
+      
+      return new Response(JSON.stringify({ message: 'Admin email sent' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+
+    // For regular users, let Supabase handle the standard email
+    if (isEligibleUser) {
+      console.log('Allowing standard email for eligible user:', user.email);
+      return new Response(JSON.stringify({ message: 'Email allowed' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // This should never be reached, but block by default
+    throw new Error(`Unexpected auth state for user: ${user.email}`);
 
   } catch (error) {
     console.error('Auth email hook error:', error)
