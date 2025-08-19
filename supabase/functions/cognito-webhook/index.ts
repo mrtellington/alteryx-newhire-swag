@@ -23,12 +23,19 @@ interface CognitoFormData {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  console.log('=== WEBHOOK DEBUG: Request received ===');
+  console.log('Method:', req.method);
+  console.log('URL:', req.url);
+  console.log('Headers:', Object.fromEntries(req.headers.entries()));
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('=== WEBHOOK DEBUG: Handling OPTIONS request ===');
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== 'POST') {
+    console.log('=== WEBHOOK DEBUG: Non-POST request received:', req.method);
     return new Response(
       JSON.stringify({ error: 'Method not allowed' }),
       { 
