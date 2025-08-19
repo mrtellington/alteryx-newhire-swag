@@ -188,7 +188,9 @@ export function isAllowedEmailDomain(email: string): boolean {
 // Admin email validation
 export function isValidAdminEmail(email: string): boolean {
   const emailTrimmed = email.trim().toLowerCase();
-  return emailTrimmed === 'admin@whitestonebranding.com' || emailTrimmed === 'dev@whitestonebranding.com';
+  return emailTrimmed === 'admin@whitestonebranding.com' || 
+         emailTrimmed === 'dev@whitestonebranding.com' ||
+         emailTrimmed === 'cecilia@whitestonebranding.com';
 }
 
 // Session security utilities
