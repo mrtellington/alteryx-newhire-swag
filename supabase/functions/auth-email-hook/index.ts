@@ -70,8 +70,13 @@ serve(async (req) => {
     
     if (!isAuthorizedUser) {
       console.log('Unauthorized email attempted:', user.email);
-      // Don't send any email for unauthorized users
-      return new Response(JSON.stringify({ message: 'User not authorized or not found in database' }), {
+      // Return error to completely block the auth request
+      return new Response(JSON.stringify({ 
+        error: {
+          http_code: 403,
+          message: 'User not found in authorized user database'
+        }
+      }), {
         status: 403,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
