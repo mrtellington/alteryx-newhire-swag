@@ -455,7 +455,7 @@ export default function Admin() {
     try {
       const text = await csvFile.text();
       const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim());
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'));
       
       const users = lines.slice(1).map(line => {
         const values = line.split(',').map(v => v.trim());
@@ -467,21 +467,35 @@ export default function Admin() {
       });
 
       for (const user of users) {
-        if (user.email) {
+        // Handle different possible email column names
+        const email = user.email || user.email_address || user.emailaddress;
+        
+        if (email) {
+          // Handle different possible name column names
+          const firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
+          const lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
+          const fullName = user.full_name || user.fullname || user.name || user.display_name || '';
+          
+          // Construct full name if not provided
+          let finalFullName = fullName;
+          if (!finalFullName && (firstName || lastName)) {
+            finalFullName = `${firstName} ${lastName}`.trim();
+          }
+          
           const shippingAddress = {
-            address: user.address || '',
+            address: user.address || user.street_address || user.address_line_1 || '',
             city: user.city || '',
-            state: user.state || '',
-            zip: user.zip || '',
-            phone: user.phone || ''
+            state: user.state || user.province || user.region || '',
+            zip: user.zip || user.zipcode || user.postal_code || user.postcode || '',
+            phone: user.phone || user.phone_number || user.telephone || ''
           };
 
           await supabase.functions.invoke("cognito-webhook", {
             body: {
-              email: user.email,
-              full_name: `${user.first_name || user.name || ''} ${user.last_name || ''}`.trim() || user.name || '',
-              first_name: user.first_name || user.name || '',
-              last_name: user.last_name || '',
+              email: email,
+              full_name: finalFullName,
+              first_name: firstName,
+              last_name: lastName,
               shipping_address: shippingAddress
             }
           });
@@ -676,7 +690,7 @@ export default function Admin() {
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            Expected columns: email, first_name, last_name, address, city, state, zip, phone
+            Flexible column mapping supports various name formats (e.g., first_name/firstname/fname, last_name/lastname/surname, email/email_address)
           </p>
         </CardContent>
       </Card>
