@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal, Truck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdminManagement from "@/components/AdminManagement";
+import { AuthUserCleanup } from "@/components/AuthUserCleanup";
 
 interface User {
   id: string;
@@ -653,8 +654,10 @@ export default function Admin() {
         </div>
       </div>
 
-      {/* Temporarily removing AdminManagement until RLS policies are properly configured */}
-      {/* <AdminManagement /> */}
+      
+      <AdminManagement />
+      
+      <AuthUserCleanup />
 
       <Card>
         <CardHeader>

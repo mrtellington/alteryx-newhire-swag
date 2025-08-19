@@ -31,3 +31,9 @@ verify_jwt = true
 
 [functions.cognito-webhook]
 verify_jwt = false
+
+[functions.cleanup-auth-users]
+verify_jwt = false
+
+[functions.trigger-cleanup]
+verify_jwt = false

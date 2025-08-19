@@ -208,6 +208,13 @@ export type Database = {
         Args: { user_email: string }
         Returns: Json
       }
+      cleanup_unauthorized_auth_users: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          deleted_email: string
+          deleted_id: string
+        }[]
+      }
       create_user_from_webhook: {
         Args:
           | {
