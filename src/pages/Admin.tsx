@@ -483,29 +483,30 @@ export default function Admin() {
         
         if (email) {
           try {
-            // Handle different possible name column names
-            const firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
-            const lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
-            const fullName = user.full_name || user.fullname || user.name || user.display_name || '';
+            // Handle different possible name column names with priority for exact matches
+            let firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
+            let lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
+            let fullName = user.full_name || user.fullname || user.name || user.display_name || '';
             
-            // If we have a full_name but no first/last, try to split it
-            let finalFirstName = firstName;
-            let finalLastName = lastName;
-            let finalFullName = fullName;
+            // Clean up the name fields
+            firstName = firstName.trim();
+            lastName = lastName.trim();
+            fullName = fullName.trim();
             
-            if (fullName && !firstName && !lastName) {
-              const nameParts = fullName.trim().split(' ');
-              if (nameParts.length >= 2) {
-                finalFirstName = nameParts[0];
-                finalLastName = nameParts.slice(1).join(' ');
-              } else if (nameParts.length === 1) {
-                finalFirstName = nameParts[0];
-              }
+            // If we have individual names but no full name, construct it
+            if ((firstName || lastName) && !fullName) {
+              fullName = `${firstName} ${lastName}`.trim();
             }
             
-            // Construct full name if not provided
-            if (!finalFullName && (finalFirstName || finalLastName)) {
-              finalFullName = `${finalFirstName} ${finalLastName}`.trim();
+            // If we have full name but missing individual names, split it
+            if (fullName && (!firstName || !lastName)) {
+              const nameParts = fullName.split(/\s+/);
+              if (nameParts.length >= 2) {
+                if (!firstName) firstName = nameParts[0];
+                if (!lastName) lastName = nameParts.slice(1).join(' ');
+              } else if (nameParts.length === 1 && !firstName) {
+                firstName = nameParts[0];
+              }
             }
             
             const shippingAddress = {
@@ -517,18 +518,18 @@ export default function Admin() {
             };
 
             console.log(`Importing user: ${email}`, {
-              finalFirstName,
-              finalLastName,
-              finalFullName,
+              firstName,
+              lastName,
+              fullName,
               shippingAddress
             });
 
             const { data, error } = await supabase.functions.invoke("cognito-webhook", {
               body: {
                 email: email,
-                full_name: finalFullName,
-                first_name: finalFirstName,
-                last_name: finalLastName,
+                full_name: fullName,
+                first_name: firstName,
+                last_name: lastName,
                 shipping_address: shippingAddress
               }
             });
