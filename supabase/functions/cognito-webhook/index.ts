@@ -65,7 +65,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    console.log('Webhook received from Cognito Forms - Enhanced security deployment');
+    console.log('Webhook received from Cognito Forms - Fixed foreign key constraints');
     console.log('Request details:', { origin, userAgent, clientIP, isValidOrigin });
     
     console.log('=== WEBHOOK DEBUG: Starting to process request ===');
