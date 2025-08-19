@@ -102,9 +102,9 @@ const handler = async (req: Request): Promise<Response> => {
                formData.name || 
                formData['Full Name'] || '';
 
-    // Extract first and last names from various sources
-    firstName = formData.firstName || formData.FirstName || formData['First Name'] || '';
-    lastName = formData.lastName || formData.LastName || formData['Last Name'] || '';
+    // Extract first and last names from various sources (including CSV underscore format)
+    firstName = formData.firstName || formData.FirstName || formData['First Name'] || formData.first_name || '';
+    lastName = formData.lastName || formData.LastName || formData['Last Name'] || formData.last_name || '';
 
     // Handle nested name object from Cognito Forms (most common case)
     if (formData.Name && typeof formData.Name === 'object') {
