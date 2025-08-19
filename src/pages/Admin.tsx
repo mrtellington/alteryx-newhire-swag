@@ -476,10 +476,24 @@ export default function Admin() {
           const lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
           const fullName = user.full_name || user.fullname || user.name || user.display_name || '';
           
-          // Construct full name if not provided
+          // If we have a full_name but no first/last, try to split it
+          let finalFirstName = firstName;
+          let finalLastName = lastName;
           let finalFullName = fullName;
-          if (!finalFullName && (firstName || lastName)) {
-            finalFullName = `${firstName} ${lastName}`.trim();
+          
+          if (fullName && !firstName && !lastName) {
+            const nameParts = fullName.trim().split(' ');
+            if (nameParts.length >= 2) {
+              finalFirstName = nameParts[0];
+              finalLastName = nameParts.slice(1).join(' ');
+            } else if (nameParts.length === 1) {
+              finalFirstName = nameParts[0];
+            }
+          }
+          
+          // Construct full name if not provided
+          if (!finalFullName && (finalFirstName || finalLastName)) {
+            finalFullName = `${finalFirstName} ${finalLastName}`.trim();
           }
           
           const shippingAddress = {
@@ -494,8 +508,8 @@ export default function Admin() {
             body: {
               email: email,
               full_name: finalFullName,
-              first_name: firstName,
-              last_name: lastName,
+              first_name: finalFirstName,
+              last_name: finalLastName,
               shipping_address: shippingAddress
             }
           });
