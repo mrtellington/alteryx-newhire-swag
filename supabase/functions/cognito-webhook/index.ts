@@ -61,7 +61,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Webhook received from Cognito Forms - Enhanced security deployment');
     console.log('Request details:', { origin, userAgent, clientIP, isValidOrigin });
     
+    console.log('=== WEBHOOK DEBUG: Starting to process request ===');
     const formData: CognitoFormData = await req.json();
+    console.log('=== WEBHOOK DEBUG: Successfully parsed JSON ===');
 
     // Log security event for webhook access
     await supabase.rpc('log_security_event', {
