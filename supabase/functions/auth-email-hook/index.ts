@@ -70,7 +70,21 @@ serve(async (req) => {
     
     if (!isAuthorizedUser) {
       console.log('Unauthorized email attempted:', user.email);
-      // Return error to completely block the auth request
+      
+      // Disable the user account in auth if it exists
+      try {
+        const { data: authUser, error: getUserError } = await supabase.auth.admin.getUserByEmail(user.email);
+        if (authUser?.user && !getUserError) {
+          console.log('Disabling unauthorized user account:', user.email);
+          await supabase.auth.admin.updateUserById(authUser.user.id, {
+            user_metadata: { disabled: true, reason: 'Not in authorized user database' }
+          });
+        }
+      } catch (error) {
+        console.error('Error disabling user:', error);
+      }
+      
+      // Return error to block the email
       return new Response(JSON.stringify({ 
         error: {
           http_code: 403,
