@@ -170,7 +170,7 @@ export type Database = {
           email: string
           first_name?: string | null
           full_name?: string | null
-          id: string
+          id?: string
           invited?: boolean
           last_name?: string | null
           order_submitted?: boolean
