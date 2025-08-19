@@ -572,7 +572,7 @@ export default function Admin() {
 
   const exportUsers = () => {
     const csvContent = [
-      "email,first_name,last_name,full_name,address,city,state,zip,phone,order_submitted,order_date,order_number,tee_size,tracking_number,shipping_carrier",
+      "email,first_name,last_name,address,city,state,zip,phone,order_submitted,order_date,order_number,tee_size,tracking_number,shipping_carrier",
       ...users.map(user => {
         const addr = user.shipping_address || {};
         const orderDate = user.orders?.[0]?.date_submitted || '';
@@ -584,7 +584,6 @@ export default function Admin() {
           user.email,
           user.first_name || '',
           user.last_name || '',
-          user.full_name || '',
           addr.line1 || addr.address || '',
           addr.city || '',
           addr.region || addr.state || '',
