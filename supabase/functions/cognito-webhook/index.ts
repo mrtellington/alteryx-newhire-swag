@@ -201,22 +201,53 @@ const handler = async (req: Request): Promise<Response> => {
     if (!existingUser || !existingUser.auth_user_id) {
       console.log(`Creating Supabase Auth user for: ${emailLower}`);
       
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: emailLower,
-        email_confirm: true, // Auto-confirm the email
-        user_metadata: {
-          full_name: fullName,
-          invited_via: 'cognito_forms'
-        }
-      });
+      // Try multiple times with different approaches to ensure auth user creation
+      let authCreateAttempts = 0;
+      const maxAttempts = 3;
+      
+      while (authCreateAttempts < maxAttempts && !authUserId) {
+        authCreateAttempts++;
+        console.log(`Auth user creation attempt ${authCreateAttempts} for ${emailLower}`);
+        
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: emailLower,
+          email_confirm: false, // Let the auth hook handle email confirmation with magic link
+          user_metadata: {
+            full_name: fullName,
+            invited_via: 'cognito_webhook'
+          }
+        });
 
-      if (authError) {
-        console.error('Error creating Supabase Auth user:', authError);
-        // Continue without auth user - they can still be in the users table
-        console.log('Continuing without auth user creation');
-      } else {
-        authUserId = authData.user?.id;
-        console.log(`Supabase Auth user created with ID: ${authUserId}`);
+        if (authError) {
+          console.error(`Auth user creation attempt ${authCreateAttempts} failed:`, authError);
+          
+          // If it's a duplicate user error, try to find the existing auth user
+          if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+            console.log('User already exists in auth, attempting to find existing auth user');
+            const { data: existingAuthUser, error: lookupError } = await supabase.auth.admin.getUserByEmail(emailLower);
+            
+            if (!lookupError && existingAuthUser?.user) {
+              authUserId = existingAuthUser.user.id;
+              console.log(`Found existing auth user with ID: ${authUserId}`);
+              break;
+            }
+          }
+          
+          // Wait before retry (exponential backoff)
+          if (authCreateAttempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 1000 * authCreateAttempts));
+          }
+        } else {
+          authUserId = authData.user?.id;
+          console.log(`Supabase Auth user created with ID: ${authUserId}`);
+          break;
+        }
+      }
+      
+      if (!authUserId) {
+        console.error('Failed to create or find auth user after all attempts');
+        // For imported users, we want them to have login capabilities, so this is more critical
+        throw new Error('Failed to create authentication user - users imported via admin must have login capabilities');
       }
     }
 
