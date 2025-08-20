@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Auth Function</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        button { background: #3b82f6; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; margin: 10px 0; }
+        button:hover { background: #2563eb; }
+        .log { background: #f8f9fa; border: 1px solid #e9ecef; padding: 16px; margin: 16px 0; border-radius: 6px; font-family: monospace; white-space: pre-wrap; min-height: 300px; max-height: 600px; overflow-y: auto; }
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+        .info { color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <h1>Test Create Auth Users Function</h1>
+    
+    <button onclick="testFunction()">Test Create Auth Users Function</button>
+    <button onclick="testSingleUser()">Test Single User (alfiya.s@alteryx.com)</button>
+    <button onclick="clearLog()">Clear Log</button>
+    
+    <div id="log" class="log">Ready to test...\n</div>
+
+    <script>
+        const SUPABASE_URL = "https://emnemfewmpjczkgwzrjv.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbmVtZmV3bXBqY3prZ3d6cmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTMwOTIsImV4cCI6MjA3MDYyOTA5Mn0.n5x7VHDee9vCJuQnrPfpdRl7iE0y0lfe1pRO3BxHwkA";
+
+        const logEl = document.getElementById('log');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `<span class="${type}">[${timestamp}] ${message}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLog() {
+            logEl.innerHTML = 'Log cleared...\n';
+        }
+
+        async function testFunction() {
+            try {
+                log('🚀 Testing create-auth-users function for all users...', 'info');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/create-auth-users`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: JSON.stringify({})
+                });
+
+                log(`📡 Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`❌ Error response: ${errorText}`, 'error');
+                    return;
+                }
+
+                const result = await response.json();
+                log(`✅ Function executed successfully!`, 'success');
+                log(`📊 Processed: ${result.processed} users`, 'info');
+                log(`📊 Successful: ${result.successful || 0}, Errors: ${result.errors || 0}`, 'info');
+                
+                if (result.results && result.results.length > 0) {
+                    log('\n📝 Detailed results:', 'info');
+                    result.results.forEach((r, i) => {
+                        const status = r.success ? '✅' : '❌';
+                        const detail = r.success ? r.action : r.error;
+                        log(`${i+1}. ${status} ${r.email}: ${detail}`, r.success ? 'success' : 'error');
+                        if (r.auth_user_id) {
+                            log(`   🔑 Auth ID: ${r.auth_user_id}`, 'info');
+                        }
+                    });
+                } else {
+                    log('📝 No detailed results returned', 'info');
+                }
+                
+                // Verify database changes
+                setTimeout(async () => {
+                    log('\n🔍 Verifying database changes...', 'info');
+                    const verifyResponse = await fetch(`${SUPABASE_URL}/rest/v1/users?select=email,auth_user_id&invited=eq.true&auth_user_id=is.null`, {
+                        headers: {
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                            'apikey': SUPABASE_ANON_KEY
+                        }
+                    });
+                    
+                    const remaining = await verifyResponse.json();
+                    log(`📊 Users still without auth: ${remaining.length}`, remaining.length === 0 ? 'success' : 'error');
+                    if (remaining.length > 0) {
+                        log(`Still missing: ${remaining.map(u => u.email).join(', ')}`, 'error');
+                    } else {
+                        log('🎉 SUCCESS! All users now have auth accounts!', 'success');
+                    }
+                }, 2000);
+
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+                console.error('Full error:', error);
+            }
+        }
+
+        async function testSingleUser() {
+            try {
+                log('🚀 Testing single user: alfiya.s@alteryx.com...', 'info');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/create-auth-users`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: JSON.stringify({ single_email: 'alfiya.s@alteryx.com' })
+                });
+
+                log(`📡 Response status: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                const result = await response.json();
+                log(`Result: ${JSON.stringify(result, null, 2)}`, 'info');
+
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

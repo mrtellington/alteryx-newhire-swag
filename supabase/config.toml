@@ -35,5 +35,8 @@ verify_jwt = false
 [functions.cleanup-auth-users]
 verify_jwt = false
 
+[functions.create-auth-users]
+verify_jwt = false
+
 [functions.trigger-cleanup]
 verify_jwt = false
