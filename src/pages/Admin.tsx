@@ -104,28 +104,75 @@ export default function Admin() {
     try {
       console.log('Creating auth users for users without auth_user_id');
       
-      const { data, error } = await supabase.functions.invoke('create-auth-users', {
-        body: {}
-      });
+      // Get users without auth_user_id first
+      const { data: usersNeedingAuth, error: fetchError } = await supabase
+        .from('users')
+        .select('id, email, full_name, first_name, last_name')
+        .is('auth_user_id', null)
+        .eq('invited', true);
 
-      if (error) {
-        console.error('Error creating auth users:', error);
+      if (fetchError) {
+        console.error('Error fetching users needing auth:', fetchError);
         toast({
           title: "Error",
-          description: "Failed to create auth users",
+          description: "Failed to fetch users needing auth",
           variant: "destructive",
         });
         return;
       }
 
-      console.log('Auth users created successfully:', data);
+      if (!usersNeedingAuth || usersNeedingAuth.length === 0) {
+        toast({
+          title: "Info",
+          description: "No users need auth account creation",
+        });
+        return;
+      }
+
+      console.log(`Found ${usersNeedingAuth.length} users needing auth accounts`);
+      
+      // Process each user individually using the cognito-webhook function
+      let successCount = 0;
+      let errorCount = 0;
+      
+      for (const user of usersNeedingAuth) {
+        try {
+          console.log(`Processing auth for: ${user.email}`);
+          
+          const { data, error } = await supabase.functions.invoke('cognito-webhook', {
+            body: {
+              email: user.email,
+              full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+              first_name: user.first_name,
+              last_name: user.last_name
+            }
+          });
+
+          if (error) {
+            console.error(`Error for ${user.email}:`, error);
+            errorCount++;
+          } else {
+            console.log(`Success for ${user.email}:`, data);
+            successCount++;
+          }
+        } catch (userError) {
+          console.error(`Exception for ${user.email}:`, userError);
+          errorCount++;
+        }
+        
+        // Small delay between requests
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      console.log(`Auth user creation completed: ${successCount} successful, ${errorCount} errors`);
       toast({
-        title: "Success",
-        description: `Auth users processed: ${data.processed}`,
+        title: "Completed",
+        description: `Auth users processed: ${successCount} successful, ${errorCount} errors`,
       });
 
       // Refresh the users list
-      fetchUsers();
+      setTimeout(fetchUsers, 2000);
+      
     } catch (error: any) {
       console.error('Error creating auth users:', error);
       toast({
