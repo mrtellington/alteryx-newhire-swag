@@ -1,52 +1,43 @@
-// Temporary script to fix Christian and Tejal's auth accounts using the updated webhook
+// Script to create auth users for all users without auth accounts
 import { supabase } from './integrations/supabase/client.js';
 
-const fixUsers = async () => {
-  const usersToFix = [
-    {
-      email: 'christian.houston@whitestonebranding.com',
-      full_name: 'Christian Houston',
-      first_name: 'Christian',
-      last_name: 'Houston'
-    },
-    {
-      email: 'tejal.makuck@whitestonebranding.com',
-      full_name: 'Tejal Makuck',
-      first_name: 'Tejal',
-      last_name: 'Makuck'
-    }
-  ];
+const createAllAuthUsers = async () => {
+  try {
+    console.log('Creating auth users for all users without auth accounts...');
+    
+    const { data, error } = await supabase.functions.invoke('create-auth-users', {
+      body: {} // Process all users without auth_user_id
+    });
 
-  for (const user of usersToFix) {
-    try {
-      console.log(`Fixing auth for: ${user.email}`);
-      
-      const { data, error } = await supabase.functions.invoke('cognito-webhook', {
-        body: user
-      });
-
-      if (error) {
-        console.error(`Error fixing ${user.email}:`, error);
-      } else {
-        console.log(`Fixed ${user.email}:`, data);
-      }
-    } catch (err) {
-      console.error(`Exception fixing ${user.email}:`, err);
+    if (error) {
+      console.error('Error creating auth users:', error);
+    } else {
+      console.log('Auth user creation completed:', data);
+      console.log(`Processed: ${data.processed} users`);
+      console.log('Results:', data.results);
     }
+  } catch (err) {
+    console.error('Exception creating auth users:', err);
   }
 
-  // Verify the fixes
-  console.log('\nVerifying auth user creation...');
-  const { data: users, error } = await supabase
+  // Verify all users now have auth accounts
+  console.log('\nVerifying all users have auth accounts...');
+  const { data: usersWithoutAuth, error: checkError } = await supabase
     .from('users')
     .select('email, auth_user_id')
-    .in('email', ['christian.houston@whitestonebranding.com', 'tejal.makuck@whitestonebranding.com']);
+    .is('auth_user_id', null)
+    .eq('invited', true);
 
-  if (error) {
-    console.error('Error checking users:', error);
+  if (checkError) {
+    console.error('Error checking users:', checkError);
   } else {
-    console.log('Current user states:', users);
+    console.log(`Users still without auth accounts: ${usersWithoutAuth.length}`);
+    if (usersWithoutAuth.length > 0) {
+      console.log('Users without auth:', usersWithoutAuth.map(u => u.email));
+    } else {
+      console.log('✅ All users now have auth accounts!');
+    }
   }
 };
 
-fixUsers();
+createAllAuthUsers();

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Auth Users</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        button { background: #3b82f6; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+        button:hover { background: #2563eb; }
+        button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .log { background: #f8f9fa; border: 1px solid #e9ecef; padding: 16px; margin: 16px 0; border-radius: 6px; font-family: monospace; white-space: pre-wrap; }
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+    <h1>Create Auth Users for All Database Users</h1>
+    <p>This will create Supabase auth accounts for all 32 users in the database who don't already have them.</p>
+    
+    <button id="createBtn" onclick="createAuthUsers()">Create Auth Users for All Users</button>
+    
+    <div id="log" class="log" style="display: none;"></div>
+
+    <script>
+        const SUPABASE_URL = "https://emnemfewmpjczkgwzrjv.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbmVtZmV3bXBqY3prZ3d6cmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTMwOTIsImV4cCI6MjA3MDYyOTA5Mn0.n5x7VHDee9vCJuQnrPfpdRl7iE0y0lfe1pRO3BxHwkA";
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('log');
+            logEl.style.display = 'block';
+            logEl.innerHTML += `<span class="${type}">${new Date().toLocaleTimeString()}: ${message}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        async function createAuthUsers() {
+            const btn = document.getElementById('createBtn');
+            btn.disabled = true;
+            btn.textContent = 'Creating auth users...';
+            
+            try {
+                log('🚀 Starting auth user creation for all users...');
+                
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/create-auth-users`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY
+                    },
+                    body: JSON.stringify({}) // Empty body to process all users
+                });
+
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    log(`❌ Error: ${JSON.stringify(result)}`, 'error');
+                    return;
+                }
+
+                log(`✅ Auth user creation completed!`, 'success');
+                log(`📊 Processed: ${result.processed} users`);
+                log('📝 Detailed results:');
+                
+                result.results.forEach((userResult, index) => {
+                    const status = userResult.success ? '✅' : '❌';
+                    const action = userResult.success ? userResult.action : userResult.error;
+                    log(`${index + 1}. ${userResult.email}: ${status} ${action}`);
+                    if (userResult.auth_user_id) {
+                        log(`   🔑 Auth ID: ${userResult.auth_user_id}`);
+                    }
+                });
+
+                log('\n🎉 All done! All 32 users should now have auth accounts and be able to login and order.', 'success');
+
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Create Auth Users for All Users';
+            }
+        }
+    </script>
+</body>
+</html>
