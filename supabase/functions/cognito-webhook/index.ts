@@ -9,24 +9,50 @@ const corsHeaders = {
 const EXPECTED_ORIGINS = [
   'cognito-webhook.zapier.com',
   'hooks.zapier.com',
-  'www.cognitoforms.com'
+  'api.zapier.com',
+  'alteryxnewhire.com',
+  'localhost:5173',
+  '127.0.0.1:5173'
 ];
 
 interface CognitoFormData {
   email?: string;
-  fullName?: string;
-  firstName?: string;
-  lastName?: string;
-  name?: string;
-  // Add other potential field names that Cognito Forms might send
-  [key: string]: any;
+  Email?: string;
+  'Email Address'?: string;
+  full_name?: string;
+  'Full Name'?: string;
+  Name?: string;
+  first_name?: string;
+  'First Name'?: string;
+  FirstName?: string;
+  last_name?: string;
+  'Last Name'?: string;
+  LastName?: string;
+  shipping_address?: {
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    phone?: string;
+  };
 }
+
+// Use service role key for admin operations
+const supabase = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);
 
 const handler = async (req: Request): Promise<Response> => {
   console.log('=== WEBHOOK DEBUG: Request received ===');
-  console.log('Method:', req.method);
   console.log('URL:', req.url);
-  console.log('Headers:', Object.fromEntries(req.headers.entries()));
+  console.log('Method:', req.method);
 
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -35,108 +61,166 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   if (req.method !== 'POST') {
-    console.log('=== WEBHOOK DEBUG: Non-POST request received:', req.method);
-    return new Response(
-      JSON.stringify({ error: 'Method not allowed' }),
-      { 
-        status: 405, 
-        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+    return new Response('Method not allowed', { 
+      status: 405,
+      headers: corsHeaders 
+    });
+  }
+
+  const origin = req.headers.get('origin') || '';
+  const userAgent = req.headers.get('user-agent') || '';
+  const clientIP = req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown';
+
+  console.log('Headers:', Object.fromEntries(req.headers));
+  
+  // Validate origin
+  const isValidOrigin = EXPECTED_ORIGINS.some(validOrigin => origin.includes(validOrigin));
+  
+  console.log('Request details:', {
+    origin,
+    userAgent,
+    clientIP,
+    isValidOrigin
+  });
+
+  if (!isValidOrigin) {
+    console.error('Suspicious request from unexpected origin:', {
+      origin,
+      userAgent,
+      clientIP
+    });
+    
+    // Log security event
+    await supabase.rpc('log_security_event', {
+      event_type: 'webhook_suspicious_origin',
+      metadata: {
+        origin,
+        user_agent: userAgent,
+        client_ip: clientIP,
+        expected_origins: EXPECTED_ORIGINS
       }
-    );
+    });
   }
 
   try {
-    // Enhanced security: Check request origin
-    const origin = req.headers.get('origin') || req.headers.get('referer') || '';
-    const userAgent = req.headers.get('user-agent') || '';
-    const clientIP = req.headers.get('x-forwarded-for') || 'unknown';
-    
-    const isValidOrigin = EXPECTED_ORIGINS.some(expectedOrigin => 
-      origin.includes(expectedOrigin) || userAgent.includes('Zapier')
-    );
+    console.log('Webhook received from Cognito Forms - Fixed foreign key constraints');
+    console.log('=== WEBHOOK DEBUG: Starting to process request ===');
 
-    if (!isValidOrigin) {
-      console.warn('Suspicious request from unexpected origin:', { origin, userAgent, clientIP });
-      // Log but don't block to avoid false positives
+    let formData: CognitoFormData;
+    try {
+      formData = await req.json();
+      console.log('=== WEBHOOK DEBUG: Successfully parsed JSON ===');
+    } catch (error) {
+      console.error('=== WEBHOOK DEBUG: Failed to parse JSON ===');
+      console.error('Error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON data' }),
+        { 
+          status: 400, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    console.log('Webhook received from Cognito Forms - Fixed foreign key constraints');
-    console.log('Request details:', { origin, userAgent, clientIP, isValidOrigin });
-    
-    console.log('=== WEBHOOK DEBUG: Starting to process request ===');
-    const formData: CognitoFormData = await req.json();
-    console.log('=== WEBHOOK DEBUG: Successfully parsed JSON ===');
-
-    // Log security event for webhook access
-    await supabase.rpc('log_security_event', {
-      event_type: 'webhook_access',
-      metadata: { 
-        origin, 
-        userAgent, 
-        clientIP,
-        valid_origin: isValidOrigin 
-      }
-    });
     console.log('Form data received:', JSON.stringify(formData, null, 2));
 
-    // Extract email from various possible field names
-    const email = formData.email || 
-                  formData.Email || 
-                  formData.emailAddress || 
-                  formData.EmailAddress ||
-                  formData['Email Address'];
-
-    // Extract name components properly
-    let fullName = '';
-    let firstName = '';
-    let lastName = '';
-
-    // First try to get full name directly
-    fullName = formData.fullName || 
-               formData.FullName || 
-               formData.name || 
-               formData['Full Name'] || '';
-
-    // Extract first and last names from various sources (including CSV underscore format)
-    firstName = formData.firstName || formData.FirstName || formData['First Name'] || formData.first_name || '';
-    lastName = formData.lastName || formData.LastName || formData['Last Name'] || formData.last_name || '';
-
-    // Handle nested name object from Cognito Forms (most common case)
-    if (formData.Name && typeof formData.Name === 'object') {
-      const nameObj = formData.Name;
-      
-      // Extract individual components
-      firstName = nameObj.First || firstName;
-      lastName = nameObj.Last || lastName;
-      
-      // Use FirstAndLast if available, otherwise construct from parts
-      if (nameObj.FirstAndLast) {
-        fullName = nameObj.FirstAndLast;
-      } else if (firstName && lastName) {
-        fullName = `${firstName} ${lastName}`;
-      } else if (firstName) {
-        fullName = firstName;
-      }
-    } else if (!fullName && firstName && lastName) {
-      // Construct full name from first/last if not already set
-      fullName = `${firstName} ${lastName}`;
-    } else if (!fullName && firstName) {
-      fullName = firstName;
-    }
-
-    console.log('Parsed name components:', { firstName, lastName, fullName });
+    // Extract and normalize email
+    const email = (
+      formData.email || 
+      formData.Email || 
+      formData['Email Address'] || 
+      ''
+    ).toLowerCase().trim();
 
     if (!email) {
-      console.error('No email found in form data');
+      return new Response(
+        JSON.stringify({ error: 'Email is required' }),
+        { 
+          status: 400, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    // Extract and normalize names
+    const fullName = (
+      formData.full_name ||
+      formData['Full Name'] ||
+      formData.Name ||
+      ''
+    ).trim();
+
+    const firstName = (
+      formData.first_name ||
+      formData['First Name'] ||
+      formData.FirstName ||
+      ''
+    ).trim();
+
+    const lastName = (
+      formData.last_name ||
+      formData['Last Name'] ||
+      formData.LastName ||
+      ''  
+    ).trim();
+
+    // Parse names intelligently
+    let parsedFirstName = firstName;
+    let parsedLastName = lastName;
+    let parsedFullName = fullName;
+
+    // If we have a full name but missing individual names, split it
+    if (fullName && (!firstName || !lastName)) {
+      const nameParts = fullName.split(/\s+/);
+      if (nameParts.length >= 2) {
+        parsedFirstName = parsedFirstName || nameParts[0];
+        parsedLastName = parsedLastName || nameParts.slice(1).join(' ');
+      }
+    }
+
+    // If we have individual names but no full name, construct it
+    if ((parsedFirstName || parsedLastName) && !parsedFullName) {
+      parsedFullName = `${parsedFirstName} ${parsedLastName}`.trim();
+    }
+
+    console.log('Parsed name components:', {
+      firstName: parsedFirstName,
+      lastName: parsedLastName,
+      fullName: parsedFullName
+    });
+
+    // Extract shipping address if provided
+    let shippingAddress = null;
+    if (formData.shipping_address && typeof formData.shipping_address === 'object') {
+      const addr = formData.shipping_address;
+      if (addr.address || addr.city || addr.state || addr.zip || addr.phone) {
+        shippingAddress = {
+          address: addr.address || '',
+          city: addr.city || '',
+          state: addr.state || '',
+          zip: addr.zip || '',
+          phone: addr.phone || ''
+        };
+      }
+    }
+
+    // Validate email domain
+    const emailDomain = email.split('@')[1]?.toLowerCase();
+    if (!['alteryx.com', 'whitestonebranding.com'].includes(emailDomain) && email !== 'tod.ellington@gmail.com') {
+      // Log security event for invalid domain
+      await supabase.rpc('log_security_event', {
+        event_type: 'webhook_invalid_domain',
+        metadata: {
+          email,
+          domain: emailDomain,
+          client_ip: clientIP
+        }
+      });
+
       return new Response(
         JSON.stringify({ 
-          error: 'Email is required',
-          message: 'No email address found in the form submission'
+          error: 'Invalid email domain',
+          message: 'Only @alteryx.com or @whitestonebranding.com email addresses are allowed'
         }),
         { 
           status: 400, 
@@ -145,40 +229,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate email domain with enhanced security logging
-    const emailLower = email.toLowerCase().trim();
-    if (emailLower !== 'tod.ellington@gmail.com' && !emailLower.endsWith('@alteryx.com') && !emailLower.endsWith('@whitestonebranding.com')) {
-      console.log(`Invalid email domain: ${emailLower}`);
-      
-      // Log security event for invalid domain attempts
-      await supabase.rpc('log_security_event', {
-        event_type: 'webhook_invalid_domain',
-        metadata: { 
-          email: emailLower, 
-          rejected_domain: emailLower.split('@')[1],
-          origin,
-          userAgent,
-          clientIP
-        }
-      });
-      
-      return new Response(
-        JSON.stringify({ 
-          error: 'Invalid email domain',
-          message: 'Only @alteryx.com and @whitestonebranding.com email addresses are allowed'
-        }),
-        { 
-          status: 403, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
+    // Log webhook access
+    await supabase.rpc('log_security_event', {
+      event_type: 'webhook_access',
+      metadata: {
+        email,
+        origin,
+        user_agent: userAgent,
+        client_ip: clientIP,
+        is_valid_origin: isValidOrigin
+      }
+    });
 
     // Check if user already exists
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
-      .select('id, email, invited, auth_user_id')
-      .eq('email', emailLower)
+      .select('id, auth_user_id')
+      .eq('email', email)
       .single();
 
     if (checkError && checkError.code !== 'PGRST116') {
@@ -186,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({ 
           error: 'Database error',
-          message: 'Error checking user status'
+          message: checkError.message
         }),
         { 
           status: 500, 
@@ -195,71 +262,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (existingUser) {
-      console.log(`User already exists: ${emailLower}`);
-      
-      // If existing user doesn't have auth_user_id, we'll create one after creating shipping address
-      if (!existingUser.auth_user_id) {
-        console.log('Existing user needs auth capabilities, will create after address update');
-      } else {
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            message: 'User already exists with login capabilities',
-            user: {
-              email: existingUser.email,
-              invited: existingUser.invited,
-              canLogin: true
-            }
-          }),
-          { 
-            status: 200, 
-            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-          }
-        );
-      }
-    }
-
-    // Create shipping address object from form data if available
-    const shippingAddress: any = {};
-    
-    // Map common address fields
-    if (formData.address || formData.Address) {
-      shippingAddress.line1 = formData.address || formData.Address;
-    }
-    if (formData.city || formData.City) {
-      shippingAddress.city = formData.city || formData.City;
-    }
-    if (formData.state || formData.State) {
-      shippingAddress.region = formData.state || formData.State;
-    }
-    if (formData.zipCode || formData.ZipCode || formData.zip || formData.Zip) {
-      shippingAddress.postal_code = formData.zipCode || formData.ZipCode || formData.zip || formData.Zip;
-    }
-    if (formData.country || formData.Country) {
-      shippingAddress.country = formData.country || formData.Country;
-    }
-    if (formData.phone || formData.Phone) {
-      shippingAddress.phone = formData.phone || formData.Phone;
-    }
-
-    // Call the database function to create/update the user first (this satisfies the auth trigger validation)
     console.log('About to call create_user_from_webhook with:', {
-      user_email: emailLower,
-      user_full_name: fullName || null,
-      user_first_name: firstName || null,
-      user_last_name: lastName || null,
-      user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
-      auth_user_id: null // We'll create the auth user after the database record exists
+      user_email: email,
+      user_full_name: parsedFullName,
+      user_first_name: parsedFirstName,
+      user_last_name: parsedLastName,
+      user_shipping_address: shippingAddress,
+      auth_user_id: null
     });
-    
+
+    // Create or update user record using RPC function
     const { data: result, error: rpcError } = await supabase
       .rpc('create_user_from_webhook', {
-        user_email: emailLower,
-        user_full_name: fullName || null,
-        user_first_name: firstName || null,
-        user_last_name: lastName || null,
-        user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
+        user_email: email,
+        user_full_name: parsedFullName || null,
+        user_first_name: parsedFirstName || null,
+        user_last_name: parsedLastName || null,
+        user_shipping_address: shippingAddress,
         auth_user_id: null
       });
     
@@ -309,64 +328,48 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Now that the user exists in the database, create the auth user if needed
+    // Now create the auth user and link it to the database user
     let authUserId = null;
     
-    // Check if we need to create auth user (for new users or existing users without auth)
-    if (!existingUser || !existingUser.auth_user_id) {
-      console.log(`Creating Supabase Auth user for: ${emailLower}`);
+    try {
+      console.log(`Creating Supabase Auth user for: ${email}`);
       
-      // Try multiple times with different approaches to ensure auth user creation
-      let authCreateAttempts = 0;
-      const maxAttempts = 3;
-      
-      while (authCreateAttempts < maxAttempts && !authUserId) {
-        authCreateAttempts++;
-        console.log(`Auth user creation attempt ${authCreateAttempts} for ${emailLower}`);
-        
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: emailLower,
-          email_confirm: false, // Let the auth hook handle email confirmation with magic link
-          user_metadata: {
-            full_name: fullName,
-            invited_via: 'cognito_webhook'
-          }
-        });
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: email,
+        email_confirm: true,
+        user_metadata: {
+          full_name: parsedFullName,
+          invited_via: 'cognito_webhook'
+        }
+      });
 
-        if (authError) {
-          console.error(`Auth user creation attempt ${authCreateAttempts} failed:`, authError);
+      if (authError) {
+        console.error('Auth user creation failed:', authError);
+        
+        // If user already exists in auth, find them
+        if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+          console.log('User already exists in auth, attempting to find existing auth user');
+          const { data: authUsers, error: lookupError } = await supabase.auth.admin.listUsers();
           
-          // If it's a duplicate user error, try to find the existing auth user
-          if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
-            console.log('User already exists in auth, attempting to find existing auth user');
-            const { data: authUsers, error: lookupError } = await supabase.auth.admin.listUsers();
-            
-            if (!lookupError && authUsers?.users) {
-              const existingUser = authUsers.users.find(user => user.email?.toLowerCase() === emailLower);
-              if (existingUser) {
-                authUserId = existingUser.id;
-                console.log(`Found existing auth user with ID: ${authUserId}`);
-                break;
-              }
+          if (!lookupError && authUsers?.users) {
+            const existingAuthUser = authUsers.users.find(user => user.email?.toLowerCase() === email);
+            if (existingAuthUser) {
+              authUserId = existingAuthUser.id;
+              console.log(`Found existing auth user with ID: ${authUserId}`);
             }
           }
-          
-          // Wait before retry (exponential backoff)
-          if (authCreateAttempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * authCreateAttempts));
-          }
-        } else {
-          authUserId = authData.user?.id;
-          console.log(`Supabase Auth user created with ID: ${authUserId}`);
-          break;
         }
+        
+        if (!authUserId) {
+          throw new Error(`Failed to create or find auth user: ${authError.message}`);
+        }
+      } else {
+        authUserId = authData.user?.id;
+        console.log(`Supabase Auth user created with ID: ${authUserId}`);
       }
       
-      if (!authUserId) {
-        console.error('Failed to create or find auth user after all attempts');
-        console.log('User database record created successfully, but without login capabilities');
-      } else {
-        // Update the database user record with the auth_user_id
+      // Update the database user record with the auth_user_id
+      if (authUserId) {
         console.log('Updating database user record with auth_user_id');
         const { error: updateError } = await supabase
           .from('users')
@@ -375,68 +378,51 @@ const handler = async (req: Request): Promise<Response> => {
           
         if (updateError) {
           console.error('Error updating user with auth_user_id:', updateError);
+          throw new Error(`Failed to link auth user: ${updateError.message}`);
         } else {
           console.log('Successfully linked auth user to database user');
         }
       }
+    } catch (authSetupError) {
+      console.error('Error in auth user setup:', authSetupError);
+      
+      // Return error if auth user creation completely fails
+      return new Response(
+        JSON.stringify({ 
+          error: 'Auth user creation failed',
+          message: authSetupError.message,
+          details: 'User was created in database but cannot login without auth account'
+        }),
+        { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
     }
-
-    console.log(`User processed successfully: ${emailLower}, ID: ${result.userId}, Message: ${result.message}`);
-    
-    // Log successful user processing
-    await supabase.rpc('log_security_event', {
-      event_type: 'webhook_user_processed',
-      metadata: { 
-        email: emailLower, 
-        user_id: result.userId,
-        action: result.message?.includes('updated') ? 'updated' : 'created',
-        auth_user_created: Boolean(authUserId)
-      }
-    });
 
     return new Response(
       JSON.stringify({ 
         success: true,
-        message: result.message || 'User processed successfully',
-        user: {
-          id: result.userId,
-          email: emailLower,
-          fullName: fullName,
-          invited: true,
-          canLogin: Boolean(authUserId)
-        }
+        message: 'User processed successfully',
+        userId: result.userId,
+        authUserId: authUserId,
+        canLogin: !!authUserId
       }),
       { 
-        status: result.message?.includes('updated') ? 200 : 201, 
         headers: { 'Content-Type': 'application/json', ...corsHeaders } 
       }
     );
 
   } catch (error: any) {
     console.error('Error in cognito-webhook function:', error);
-    
-    // Log security event for unexpected errors
-    try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      
-      await supabase.rpc('log_security_event', {
-        event_type: 'webhook_unexpected_error',
-        metadata: { error: error.message }
-      });
-    } catch (logError) {
-      console.error('Failed to log security event:', logError);
-    }
-    
     return new Response(
       JSON.stringify({ 
         error: 'Internal server error',
         message: error.message
       }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      { 
+        status: 500, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
       }
     );
   }

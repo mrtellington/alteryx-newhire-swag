@@ -15,6 +15,7 @@ import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
 import { FixImportedUsers } from "@/components/FixImportedUsers";
+import { TestUserAuth } from "@/components/TestUserAuth";
 import { useSessionSecurity } from "@/hooks/useSessionSecurity";
 
 
@@ -753,6 +754,8 @@ export default function Admin() {
       </Card>
 
       <FixImportedUsers />
+
+      <TestUserAuth />
 
       <Card>
         <CardHeader>
