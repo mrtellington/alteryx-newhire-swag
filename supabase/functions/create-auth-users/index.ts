@@ -27,15 +27,21 @@ serve(async (req) => {
       }
     );
 
-    // Get users without auth_user_id
+    console.log('Starting auth user creation process...');
+    
+    // Get users without auth_user_id (only invited users)
     let query = supabaseAdmin
       .from('users')
       .select('id, email, full_name, first_name, last_name')
-      .is('auth_user_id', null);
+      .is('auth_user_id', null)
+      .eq('invited', true);
     
     // If single_email is provided, filter for just that user
     if (singleEmail) {
       query = query.eq('email', singleEmail);
+      console.log(`Processing single user: ${singleEmail}`);
+    } else {
+      console.log('Processing all users without auth_user_id');
     }
     
     const { data: usersNeedingAuth, error: fetchError } = await query;
@@ -48,10 +54,24 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Found ${usersNeedingAuth?.length || 0} users needing auth accounts`);
+    
+    if (!usersNeedingAuth || usersNeedingAuth.length === 0) {
+      console.log('No users need auth account creation');
+      return new Response(
+        JSON.stringify({ 
+          message: 'No users need auth account creation', 
+          processed: 0,
+          results: [] 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const results = [];
 
-    for (const user of usersNeedingAuth || []) {
-      console.log(`Creating auth user for: ${user.email}`);
+    for (const user of usersNeedingAuth) {
+      console.log(`[${results.length + 1}/${usersNeedingAuth.length}] Processing: ${user.email}`);
       
       try {
         // Create auth user
@@ -80,8 +100,10 @@ serve(async (req) => {
                   .eq('id', user.id);
 
                 if (updateError) {
+                  console.error(`Failed to link existing auth user for ${user.email}:`, updateError);
                   results.push({ email: user.email, success: false, error: `Failed to link existing auth user: ${updateError.message}` });
                 } else {
+                  console.log(`✅ Successfully linked existing auth user for ${user.email}`);
                   results.push({ email: user.email, success: true, auth_user_id: existingAuthUser.id, action: 'linked_existing' });
                 }
               } else {
@@ -101,8 +123,10 @@ serve(async (req) => {
             .eq('id', user.id);
 
           if (updateError) {
+            console.error(`Failed to link new auth user for ${user.email}:`, updateError);
             results.push({ email: user.email, success: false, error: `Auth user created but failed to link: ${updateError.message}` });
           } else {
+            console.log(`✅ Successfully created and linked new auth user for ${user.email}`);
             results.push({ email: user.email, success: true, auth_user_id: authUser.user.id, action: 'created_new' });
           }
         }
@@ -112,10 +136,20 @@ serve(async (req) => {
       }
     }
 
+    const successCount = results.filter(r => r.success).length;
+    const errorCount = results.filter(r => !r.success).length;
+    
+    console.log(`Auth user creation completed: ${successCount} successful, ${errorCount} errors`);
+    results.forEach(r => {
+      console.log(`  ${r.success ? '✅' : '❌'} ${r.email}: ${r.action || r.error}`);
+    });
+
     return new Response(
       JSON.stringify({ 
         message: 'Auth user creation completed', 
         processed: results.length,
+        successful: successCount,
+        errors: errorCount,
         results 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
