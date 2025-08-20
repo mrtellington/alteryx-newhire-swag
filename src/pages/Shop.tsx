@@ -19,6 +19,8 @@ export default function Shop() {
   const sizes = useMemo(() => ["XS","S","M","L","XL","2XL","3XL","4XL"], []);
 
   useEffect(() => {
+    let mounted = true;
+    
     // SEO
     document.title = "Claim Your Gift | Alteryx New Hire Store";
     const meta = (document.querySelector('meta[name="description"]') as HTMLMetaElement | null) ?? (() => {
@@ -36,16 +38,56 @@ export default function Shop() {
     }
     canonical.setAttribute('href', `${window.location.origin}/shop`);
 
+    const checkAuthAndOrder = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (!session) {
+          setTimeout(() => navigate("/auth", { replace: true }), 100);
+          return;
+        }
+        
+        const email = session.user.email ?? '';
+        if (!isAllowedEmail(email)) {
+          toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
+          supabase.auth.signOut();
+          setTimeout(() => navigate("/auth", { replace: true }), 100);
+          return;
+        }
+
+        // Check if user has already placed an order
+        const { data: userData, error } = await supabase
+          .from("users")
+          .select("order_submitted")
+          .eq("auth_user_id", session.user.id)
+          .single();
+
+        if (!mounted) return;
+
+        if (!error && userData?.order_submitted) {
+          setTimeout(() => navigate("/thank-you", { replace: true }), 100);
+        }
+      } catch (error) {
+        console.error("Error checking auth and order status:", error);
+      }
+    };
+
+    checkAuthAndOrder();
+
     // Auth guard
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mounted) return;
+      
       if (!session) {
-        navigate("/auth", { replace: true });
+        setTimeout(() => navigate("/auth", { replace: true }), 100);
       } else {
         const email = session.user.email ?? '';
         if (!isAllowedEmail(email)) {
           toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
           supabase.auth.signOut();
-          navigate("/auth", { replace: true });
+          setTimeout(() => navigate("/auth", { replace: true }), 100);
           return;
         }
 
@@ -57,8 +99,10 @@ export default function Shop() {
             .eq("auth_user_id", session.user.id)
             .single();
 
+          if (!mounted) return;
+
           if (!error && userData?.order_submitted) {
-            navigate("/thank-you", { replace: true });
+            setTimeout(() => navigate("/thank-you", { replace: true }), 100);
           }
         } catch (error) {
           console.error("Error checking order status:", error);
@@ -66,32 +110,10 @@ export default function Shop() {
       }
     });
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        navigate("/auth", { replace: true });
-      } else if (session.user.email && !isAllowedEmail(session.user.email)) {
-        toast({ title: "Unauthorized email", description: "Only @alteryx.com emails are allowed." });
-        supabase.auth.signOut();
-        navigate("/auth", { replace: true });
-      } else {
-        // Check if user has already placed an order
-        try {
-          const { data: userData, error } = await supabase
-            .from("users")
-            .select("order_submitted")
-            .eq("auth_user_id", session.user.id)
-            .single();
-
-          if (!error && userData?.order_submitted) {
-            navigate("/thank-you", { replace: true });
-          }
-        } catch (error) {
-          console.error("Error checking order status:", error);
-        }
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const inventoryQuery = useQuery({

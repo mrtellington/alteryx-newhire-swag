@@ -26,7 +26,7 @@ export default function ThankYou() {
         
         if (!session) {
           console.log("ThankYou: No session, redirecting to auth");
-          navigationTimeout = setTimeout(() => navigate("/auth", { replace: true }), 100);
+          navigationTimeout = setTimeout(() => navigate("/auth", { replace: true }), 200);
           return;
         }
 
@@ -42,7 +42,7 @@ export default function ThankYou() {
 
         if (userError) {
           console.error("ThankYou: User lookup error:", userError);
-          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
+          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 200);
           return;
         }
 
@@ -52,7 +52,7 @@ export default function ThankYou() {
         // If user hasn't ordered, redirect to shop
         if (!userData.order_submitted) {
           console.log("ThankYou: User has not submitted order, redirecting to shop");
-          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
+          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 200);
           return;
         }
 
@@ -70,7 +70,7 @@ export default function ThankYou() {
 
         if (orderError) {
           console.error("ThankYou: Order lookup error:", orderError);
-          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
+          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 200);
           return;
         }
 
@@ -79,7 +79,7 @@ export default function ThankYou() {
       } catch (error) {
         if (!mounted) return;
         console.error("ThankYou: Error checking user and order:", error);
-        navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
+        navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 200);
       } finally {
         if (mounted) {
           console.log("ThankYou: Setting loading to false");
