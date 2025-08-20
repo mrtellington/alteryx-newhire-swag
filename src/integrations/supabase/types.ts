@@ -269,6 +269,10 @@ export type Database = {
         Args: { user_email?: string }
         Returns: boolean
       }
+      link_existing_auth_users: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       log_detailed_security_event: {
         Args: {
           additional_context?: Json
