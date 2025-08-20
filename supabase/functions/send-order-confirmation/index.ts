@@ -77,26 +77,42 @@ serve(async (req) => {
       
       let orderQuery = supabase
         .from("orders")
-        .select("tee_size, order_number")
-        .eq("user_id", profile.id)
-        .order("date_submitted", { ascending: false })
-        .limit(1);
+        .select("id, tee_size, order_number, date_submitted")
+        .eq("user_id", profile.id);
       
-      // If orderId is provided, use it for more precise lookup
+      // If orderId is provided, use it for more precise lookup, otherwise get the latest
       if (orderId) {
         orderQuery = orderQuery.eq("id", orderId);
+      } else {
+        orderQuery = orderQuery.order("date_submitted", { ascending: false }).limit(1);
       }
       
       const { data: orderData, error: orderErr } = await orderQuery.maybeSingle();
       
-      console.log("Order query result:", { orderData, orderErr });
+      console.log("Order query result:", { orderData, orderErr, userId: profile.id, providedOrderId: orderId });
       
       if (!orderErr && orderData) {
         teeSize = orderData.tee_size;
         orderNumber = orderData.order_number;
-        console.log(`Found order data: teeSize=${teeSize}, orderNumber=${orderNumber}`);
+        console.log(`Found order data: teeSize=${teeSize}, orderNumber=${orderNumber}, orderId=${orderData.id}`);
       } else {
-        console.log("No order data found or error occurred");
+        console.log("No order data found or error occurred:", orderErr);
+        // If no specific order found but user has orders, get the latest
+        if (!orderId) {
+          const { data: latestOrder, error: latestErr } = await supabase
+            .from("orders")
+            .select("id, tee_size, order_number, date_submitted")
+            .eq("user_id", profile.id)
+            .order("date_submitted", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (!latestErr && latestOrder) {
+            teeSize = latestOrder.tee_size;
+            orderNumber = latestOrder.order_number;
+            console.log(`Found latest order: teeSize=${teeSize}, orderNumber=${orderNumber}, orderId=${latestOrder.id}`);
+          }
+        }
       }
     }
 

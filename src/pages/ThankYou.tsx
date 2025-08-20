@@ -9,77 +9,91 @@ export default function ThankYou() {
   const [user, setUser] = useState<any>(null);
   const [orderInfo, setOrderInfo] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
+    let mounted = true;
+    
+    const checkUserAndOrder = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        if (!session) {
+          navigate("/auth", { replace: true });
+          return;
+        }
+
+        // Get user data by auth_user_id
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("*")
+          .eq("auth_user_id", session.user.id)
+          .single();
+
+        if (!mounted) return;
+
+        if (userError) {
+          console.error("User lookup error:", userError);
+          navigate("/shop", { replace: true });
+          return;
+        }
+
+        setUser(userData);
+
+        // If user hasn't ordered, redirect to shop
+        if (!userData.order_submitted) {
+          console.log("User has not submitted order, redirecting to shop");
+          navigate("/shop", { replace: true });
+          return;
+        }
+
+        // Get order information with tee size using the userData.id (the actual user table id)
+        const { data: orderData, error: orderError } = await supabase
+          .from("orders")
+          .select("*, tee_size")
+          .eq("user_id", userData.id)
+          .order("date_submitted", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (!mounted) return;
+
+        if (orderError) {
+          console.error("Order lookup error:", orderError);
+          navigate("/shop", { replace: true });
+          return;
+        }
+
+        console.log("Order found:", orderData);
+        setOrderInfo(orderData);
+      } catch (error) {
+        if (!mounted) return;
+        console.error("Error checking user and order:", error);
+        navigate("/shop", { replace: true });
+      } finally {
+        if (mounted) {
+          setLoading(false);
+          setCheckingAuth(false);
+        }
+      }
+    };
+
     // Only run the check if we're actually on the thank-you page
     if (location.pathname === '/thank-you') {
-      // Add a small delay to prevent flashing
-      const timer = setTimeout(() => {
-        checkUserAndOrder();
-      }, 100);
-      return () => clearTimeout(timer);
+      checkUserAndOrder();
     }
-  }, [location.pathname]);
 
-  const checkUserAndOrder = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
+    return () => {
+      mounted = false;
+    };
+  }, [location.pathname, navigate]);
 
-      // Get user data by auth_user_id
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("auth_user_id", session.user.id)
-        .single();
 
-      if (userError) {
-        console.error("User lookup error:", userError);
-        navigate("/shop");
-        return;
-      }
-
-      setUser(userData);
-
-      // If user hasn't ordered, redirect to shop
-      if (!userData.order_submitted) {
-        console.log("User has not submitted order, redirecting to shop");
-        navigate("/shop");
-        return;
-      }
-
-      // Get order information with tee size using the userData.id (the actual user table id)
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .select("*, tee_size")
-        .eq("user_id", userData.id)
-        .order("date_submitted", { ascending: false })
-        .limit(1)
-        .single();
-
-      if (orderError) {
-        console.error("Order lookup error:", orderError);
-        navigate("/shop");
-        return;
-      }
-
-      console.log("Order found:", orderData);
-      setOrderInfo(orderData);
-    } catch (error) {
-      console.error("Error checking user and order:", error);
-      navigate("/shop");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (loading || checkingAuth) {
     return (
       <div className="container mx-auto py-8">
         <div className="flex items-center justify-center h-64">
