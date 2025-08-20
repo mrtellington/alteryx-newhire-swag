@@ -339,12 +339,15 @@ const handler = async (req: Request): Promise<Response> => {
           // If it's a duplicate user error, try to find the existing auth user
           if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
             console.log('User already exists in auth, attempting to find existing auth user');
-            const { data: existingAuthUser, error: lookupError } = await supabase.auth.admin.getUserByEmail(emailLower);
+            const { data: authUsers, error: lookupError } = await supabase.auth.admin.listUsers();
             
-            if (!lookupError && existingAuthUser?.user) {
-              authUserId = existingAuthUser.user.id;
-              console.log(`Found existing auth user with ID: ${authUserId}`);
-              break;
+            if (!lookupError && authUsers?.users) {
+              const existingUser = authUsers.users.find(user => user.email?.toLowerCase() === emailLower);
+              if (existingUser) {
+                authUserId = existingUser.id;
+                console.log(`Found existing auth user with ID: ${authUserId}`);
+                break;
+              }
             }
           }
           
