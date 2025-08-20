@@ -11,10 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal, Truck } from "lucide-react";
+import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal, Truck, RefreshCw } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
 import { useSessionSecurity } from "@/hooks/useSessionSecurity";
+import { SecurityDashboard } from "@/components/SecurityDashboard";
 
 
 interface User {
@@ -61,6 +62,8 @@ export default function Admin() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, currentUser: '' });
+  const [isCreatingAuth, setIsCreatingAuth] = useState(false);
+  const [authProgress, setAuthProgress] = useState({ current: 0, total: 0, currentUser: '' });
   const { toast } = useToast();
 
   // Initialize session security monitoring
@@ -101,9 +104,6 @@ export default function Admin() {
       });
     }
   };
-
-  // Remove the old complex createAuthUsers function
-  // All user creation now happens automatically via cognito-webhook
 
   // Helper function to get clean display name from user data
   const getDisplayName = (user: User) => {
@@ -407,7 +407,6 @@ export default function Admin() {
     }
   };
 
-
   const updateShippingInfo = async (orderId: string, trackingNumber: string, shippingCarrier: string) => {
     try {
       const { error } = await supabase
@@ -470,206 +469,243 @@ export default function Admin() {
     }
   };
 
-  // Helper function to create delay with progressive timing
-  const createDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Helper function to calculate progressive delay based on position and batch size
-  const getProgressiveDelay = (index: number, totalUsers: number) => {
-    // Base delay starts at 500ms
-    let baseDelay = 500;
-    
-    // Increase delay for larger batches
-    if (totalUsers > 50) baseDelay = 1000;
-    if (totalUsers > 100) baseDelay = 1500;
-    
-    // Add progressive delay every 10 users
-    const progressiveDelay = Math.floor(index / 10) * 200;
-    
-    return baseDelay + progressiveDelay;
-  };
-
-  // Enhanced retry logic for auth user creation
-  const createUserWithRetry = async (userData: any, retries = 3) => {
-    for (let attempt = 1; attempt <= retries; attempt++) {
-      try {
-        const { data, error } = await supabase.functions.invoke("cognito-webhook", {
-          body: userData
-        });
-
-        if (error) {
-          // Check if it's a rate limiting error
-          const isRateLimit = error.message?.includes('rate') || 
-                             error.message?.includes('limit') || 
-                             error.message?.includes('429') ||
-                             error.status === 429;
-          
-          if (isRateLimit && attempt < retries) {
-            console.log(`Rate limit hit for ${userData.email}, retrying in ${attempt * 2000}ms (attempt ${attempt}/${retries})`);
-            await createDelay(attempt * 2000); // Progressive retry delay
-            continue;
-          }
-          
-          throw error;
-        }
-
-        return { data, error: null };
-      } catch (err) {
-        if (attempt === retries) {
-          throw err;
-        }
-        
-        console.log(`Attempt ${attempt} failed for ${userData.email}, retrying...`);
-        await createDelay(attempt * 1000);
-      }
-    }
-  };
-
-  const handleCsvUpload = async () => {
-    if (!csvFile) return;
-
+  const uploadCSV = async (file: File) => {
     setIsImporting(true);
+    setImportProgress({ current: 0, total: 0, currentUser: '' });
     
     try {
-      const text = await csvFile.text();
+      const text = await file.text();
       const lines = text.split('\n').filter(line => line.trim());
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/[^a-z0-9]/g, '_'));
       
-      const users = lines.slice(1).map(line => {
-        const values = line.split(',').map(v => v.trim());
-        const user: any = {};
-        headers.forEach((header, index) => {
-          user[header] = values[index] || '';
+      if (lines.length === 0) {
+        toast({
+          title: "Error",
+          description: "CSV file is empty",
+          variant: "destructive"
         });
-        return user;
-      }).filter(user => user.email || user.email_address || user.emailaddress); // Filter out empty rows
+        return;
+      }
 
-      const totalUsers = users.length;
-      setImportProgress({ current: 0, total: totalUsers, currentUser: '' });
+      // Skip header row
+      const dataLines = lines.slice(1);
+      setImportProgress({ current: 0, total: dataLines.length, currentUser: '' });
 
       let successCount = 0;
       let errorCount = 0;
-      const BATCH_SIZE = 10;
+      const errors: string[] = [];
 
-      // Process users in batches
-      for (let batchStart = 0; batchStart < totalUsers; batchStart += BATCH_SIZE) {
-        const batch = users.slice(batchStart, Math.min(batchStart + BATCH_SIZE, totalUsers));
+      // Process users in smaller batches with progressive delays to prevent rate limiting
+      const batchSize = 5; // Reduced from 10 to 5 for better rate limiting
+      const batches = [];
+      for (let i = 0; i < dataLines.length; i += batchSize) {
+        batches.push(dataLines.slice(i, i + batchSize));
+      }
+
+      for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
+        const batch = batches[batchIndex];
+        console.log(`Processing batch ${batchIndex + 1}/${batches.length}`);
         
-        console.log(`Processing batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(totalUsers / BATCH_SIZE)}`);
+        for (let userIndex = 0; userIndex < batch.length; userIndex++) {
+          const line = batch[userIndex];
+          const currentIndex = batchIndex * batchSize + userIndex;
+          
+          try {
+            const [email, firstName, lastName, address, city, state, zip, phone] = line.split(',').map(field => field.trim().replace(/"/g, ''));
+            
+            if (!email || !firstName || !lastName) {
+              errors.push(`Row ${currentIndex + 2}: Missing required fields (email, first name, or last name)`);
+              errorCount++;
+              continue;
+            }
 
-        // Process each user in the batch with progressive delays
-        for (let i = 0; i < batch.length; i++) {
-          const user = batch[i];
-          const globalIndex = batchStart + i;
-          
-          // Handle different possible email column names
-          const email = user.email || user.email_address || user.emailaddress;
-          
-          if (email) {
             setImportProgress({ 
-              current: globalIndex + 1, 
-              total: totalUsers, 
-              currentUser: email 
+              current: currentIndex + 1, 
+              total: dataLines.length, 
+              currentUser: `${firstName} ${lastName} (${email})` 
             });
 
-            try {
-              // Handle different possible name column names with priority for exact matches
-              let firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
-              let lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
-              let fullName = user.full_name || user.fullname || user.name || user.display_name || '';
-              
-              // Clean up the name fields
-              firstName = firstName.trim();
-              lastName = lastName.trim();
-              fullName = fullName.trim();
-              
-              // If we have individual names but no full name, construct it
-              if ((firstName || lastName) && !fullName) {
-                fullName = `${firstName} ${lastName}`.trim();
-              }
-              
-              // If we have full name but missing individual names, split it
-              if (fullName && (!firstName || !lastName)) {
-                const nameParts = fullName.split(/\s+/);
-                if (nameParts.length >= 2) {
-                  if (!firstName) firstName = nameParts[0];
-                  if (!lastName) lastName = nameParts.slice(1).join(' ');
-                } else if (nameParts.length === 1 && !firstName) {
-                  firstName = nameParts[0];
-                }
-              }
-              
-              const shippingAddress = {
-                address: user.address || user.street_address || user.address_line_1 || '',
-                city: user.city || '',
-                state: user.state || user.province || user.region || '',
-                zip: user.zip || user.zipcode || user.postal_code || user.postcode || '',
-                phone: user.phone || user.phone_number || user.telephone || ''
-              };
+            const fullName = `${firstName} ${lastName}`;
+            const shippingAddress = address || city || state || zip || phone ? {
+              address: address || '',
+              city: city || '',
+              state: state || '',
+              zip: zip || '',
+              phone: phone || ''
+            } : null;
 
-              console.log(`Importing user ${globalIndex + 1}/${totalUsers}: ${email}`);
-
-              const userData = {
-                email: email,
-                full_name: fullName,
-                first_name: firstName,
-                last_name: lastName,
-                shipping_address: shippingAddress
-              };
-
-              // Use retry logic for user creation
-              const { data, error } = await createUserWithRetry(userData);
-
-              if (error) {
-                console.error(`Error importing user ${email}:`, error);
-                errorCount++;
-              } else {
-                console.log(`Successfully imported user ${email}`);
-                successCount++;
-              }
-
-              // Progressive delay between users (but not after the last user in batch)
-              if (i < batch.length - 1 || batchStart + BATCH_SIZE < totalUsers) {
-                const delay = getProgressiveDelay(globalIndex, totalUsers);
-                console.log(`Waiting ${delay}ms before next user...`);
-                await createDelay(delay);
-              }
-
-            } catch (userError) {
-              console.error(`Error processing user ${email}:`, userError);
-              errorCount++;
+            // Increased progressive delay to prevent rate limiting
+            const delay = Math.min(1000 + (batchIndex * 500) + (userIndex * 300), 3000);
+            if (currentIndex > 0) {
+              console.log(`Waiting ${delay}ms before processing ${email}...`);
+              await new Promise(resolve => setTimeout(resolve, delay));
             }
+
+            // Create user via webhook function with enhanced retry logic
+            let retryCount = 0;
+            const maxRetries = 3;
+            let success = false;
+
+            while (retryCount < maxRetries && !success) {
+              try {
+                const { data, error } = await supabase.functions.invoke('cognito-webhook', {
+                  body: {
+                    email,
+                    full_name: fullName,
+                    first_name: firstName,
+                    last_name: lastName,
+                    shipping_address: shippingAddress
+                  }
+                });
+
+                if (error) {
+                  if (error.message?.includes('rate limit') || error.message?.includes('too many requests')) {
+                    if (retryCount < maxRetries - 1) {
+                      retryCount++;
+                      const retryDelay = 2000 * Math.pow(2, retryCount); // Exponential backoff
+                      console.log(`Rate limited for ${email}, retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
+                      await new Promise(resolve => setTimeout(resolve, retryDelay));
+                      continue;
+                    }
+                  }
+                  throw error;
+                }
+
+                console.log(`✅ Successfully processed: ${email}`, data);
+                successCount++;
+                success = true;
+              } catch (retryError) {
+                if (retryCount === maxRetries - 1) {
+                  throw retryError;
+                }
+                retryCount++;
+              }
+            }
+
+          } catch (error) {
+            console.error(`❌ Error processing row ${currentIndex + 2}:`, error);
+            errors.push(`Row ${currentIndex + 2}: ${error.message}`);
+            errorCount++;
           }
         }
 
-        // Longer delay between batches (except for the last batch)
-        if (batchStart + BATCH_SIZE < totalUsers) {
-          console.log('Waiting 3 seconds between batches...');
-          await createDelay(3000);
+        // Longer delay between batches to ensure rate limiting compliance
+        if (batchIndex < batches.length - 1) {
+          const batchDelay = 3000 + (batchIndex * 500); // Increased from 1500ms
+          console.log(`Batch ${batchIndex + 1} complete. Waiting ${batchDelay}ms before next batch...`);
+          await new Promise(resolve => setTimeout(resolve, batchDelay));
         }
       }
 
-      toast({
-        title: "Import Complete",
-        description: `Successfully imported ${successCount} users. ${errorCount > 0 ? `${errorCount} errors.` : ''}`
-      });
-
-      setCsvFile(null);
-      setImportProgress({ current: 0, total: 0, currentUser: '' });
+      // Show results with better messaging
+      if (successCount > 0) {
+        toast({
+          title: "Success",
+          description: `✅ Successfully imported ${successCount} users with auth accounts created`
+        });
+      }
       
-      // Wait a moment for the database to update, then refresh
-      setTimeout(() => {
-        fetchUsers();
-      }, 2000);
+      if (errorCount > 0) {
+        toast({
+          title: "Warning", 
+          description: `❌ Failed to import ${errorCount} users. Check console for details.`,
+          variant: "destructive"
+        });
+        console.error('Import errors:', errors);
+      }
+
+      // Also show summary in console
+      console.log(`📊 Import Summary: ${successCount} successful, ${errorCount} errors out of ${dataLines.length} total`);
+
+      fetchUsers(); // Refresh the user list
       
     } catch (error) {
-      console.error("Error importing CSV:", error);
+      console.error('CSV upload error:', error);
       toast({
         title: "Error",
-        description: "Failed to import CSV",
+        description: "Failed to process CSV file",
         variant: "destructive"
       });
     } finally {
       setIsImporting(false);
+      setImportProgress({ current: 0, total: 0, currentUser: '' });
+    }
+  };
+
+  const createAllAuthUsers = async () => {
+    setIsCreatingAuth(true);
+    setAuthProgress({ current: 0, total: 0, currentUser: '' });
+    
+    try {
+      console.log('🚀 Creating auth users for all users without auth accounts...');
+      
+      const { data, error } = await supabase.functions.invoke('create-missing-auth-users', {
+        body: {} // Process all users without auth_user_id
+      });
+
+      if (error) {
+        console.error('❌ Error creating auth users:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create auth users",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('✅ Auth user creation completed!');
+      console.log(`📊 Processed: ${data.processed} users`);
+      
+      let successCount = 0;
+      let errorCount = 0;
+      
+      data.results.forEach((userResult: any, index: number) => {
+        setAuthProgress({ 
+          current: index + 1, 
+          total: data.results.length, 
+          currentUser: userResult.email 
+        });
+        
+        if (userResult.success) {
+          successCount++;
+          console.log(`${index + 1}. ✅ ${userResult.email}: ${userResult.action} (Auth ID: ${userResult.auth_user_id})`);
+        } else {
+          errorCount++;
+          console.log(`${index + 1}. ❌ ${userResult.email}: ${userResult.error}`);
+        }
+      });
+
+      console.log(`\n📈 Summary: ${successCount} successful, ${errorCount} errors`);
+      
+      if (successCount > 0) {
+        toast({
+          title: "Success",
+          description: `✅ Successfully created/linked auth accounts for ${successCount} users`
+        });
+      }
+      
+      if (errorCount > 0) {
+        toast({
+          title: "Warning",
+          description: `❌ Failed to create auth accounts for ${errorCount} users`,
+          variant: "destructive"
+        });
+      }
+      
+      console.log('🎉 All users should now have auth accounts and be able to login and order!');
+      
+      // Refresh user list
+      fetchUsers();
+      
+    } catch (err) {
+      console.error('❌ Exception creating auth users:', err);
+      toast({
+        title: "Error",
+        description: "Critical error during auth user creation",
+        variant: "destructive"
+      });
+    } finally {
+      setIsCreatingAuth(false);
+      setAuthProgress({ current: 0, total: 0, currentUser: '' });
     }
   };
 
@@ -836,7 +872,7 @@ export default function Admin() {
               onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
               disabled={isImporting}
             />
-            <Button onClick={handleCsvUpload} disabled={!csvFile || isImporting}>
+            <Button onClick={() => csvFile && uploadCSV(csvFile)} disabled={!csvFile || isImporting}>
               <Upload className="w-4 h-4 mr-2" />
               {isImporting ? 'Importing...' : 'Import CSV'}
             </Button>
@@ -880,6 +916,61 @@ export default function Admin() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Fix Missing Auth Accounts</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Some users may be missing authentication accounts due to previous rate limiting issues. 
+              Use this tool to create auth accounts for all users who need them.
+            </p>
+            
+            <Button 
+              onClick={createAllAuthUsers} 
+              disabled={isCreatingAuth}
+              className="w-full"
+            >
+              {isCreatingAuth ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Creating Auth Accounts...
+                </>
+              ) : (
+                'Create Missing Auth Accounts'
+              )}
+            </Button>
+            
+            {isCreatingAuth && (
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Progress</span>
+                  <span className="text-sm text-muted-foreground">
+                    {authProgress.current} / {authProgress.total}
+                  </span>
+                </div>
+                <div className="w-full bg-background rounded-full h-2 mb-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ 
+                      width: `${authProgress.total > 0 ? (authProgress.current / authProgress.total) * 100 : 0}%` 
+                    }}
+                  ></div>
+                </div>
+                {authProgress.currentUser && (
+                  <p className="text-xs text-muted-foreground">
+                    Processing: {authProgress.currentUser}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <SecurityDashboard />
+
+      <Card>
+        <CardHeader>
           <CardTitle>System Status</CardTitle>
         </CardHeader>
         <CardContent>
@@ -892,6 +983,9 @@ export default function Admin() {
             </p>
             <p className="text-sm text-muted-foreground">
               ✅ CSV import and manual user addition use the same reliable process
+            </p>
+            <p className="text-sm text-muted-foreground">
+              ✅ Enhanced rate limiting protection prevents auth creation failures
             </p>
           </div>
         </CardContent>
@@ -952,8 +1046,6 @@ export default function Admin() {
                        )}
                      </div>
                    </TableHead>
-                   <TableHead>Address</TableHead>
-                  <TableHead>Phone</TableHead>
                   <TableHead 
                     className="cursor-pointer hover:bg-muted/50 select-none"
                     onClick={() => sortUsers('order_submitted')}
@@ -970,199 +1062,169 @@ export default function Admin() {
                     onClick={() => sortUsers('orderDate')}
                   >
                     <div className="flex items-center gap-1">
-                      Order Info
+                      Order Date
                       {sortField === 'orderDate' && (
                         sortDirection === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />
                       )}
                     </div>
                   </TableHead>
+                  <TableHead>Order Number</TableHead>
+                  <TableHead>T-Shirt Size</TableHead>
+                  <TableHead>Shipping Info</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredUsers.map((user) => {
-                  const addr = user.shipping_address || {};
                   const order = user.orders?.[0];
                   
                   return (
-                     <TableRow key={user.id}>
-                       <TableCell className="font-medium">{user.email}</TableCell>
-                       <TableCell>
-                         {user.first_name || '-'}
-                       </TableCell>
-                       <TableCell>
-                         {user.last_name || '-'}
-                       </TableCell>
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.email}</TableCell>
+                      <TableCell>{user.first_name || '-'}</TableCell>
+                      <TableCell>{user.last_name || '-'}</TableCell>
                       <TableCell>
-                        {addr.line1 || addr.address ? (
-                          <div className="text-sm">
-                            {addr.line1 || addr.address}<br />
-                            {addr.line2 && <>{addr.line2}<br /></>}
-                            {addr.city}, {addr.region || addr.state} {addr.postal_code || addr.zip}
-                          </div>
-                        ) : "-"}
-                      </TableCell>
-                      <TableCell>{addr.phone || "-"}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs ${
-                            user.order_submitted
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {user.order_submitted ? "Ordered" : "Pending"}
+                        <span className={`px-2 py-1 rounded-full text-xs ${
+                          user.order_submitted 
+                            ? 'bg-green-100 text-green-800' 
+                            : 'bg-yellow-100 text-yellow-800'
+                        }`}>
+                          {user.order_submitted ? 'Ordered' : 'Pending'}
                         </span>
                       </TableCell>
-                        <TableCell>
-                          {user.orders && user.orders.length > 0 ? (
-                            <div className="text-sm space-y-1">
-                               {user.orders.map((order, index) => (
-                                 <div key={order.id} className="flex items-center gap-2">
-                                   <div className="flex flex-col">
-                                     <div className="font-medium">{new Date(order.date_submitted).toLocaleDateString()}</div>
-                                     <div className="text-muted-foreground text-xs">{order.order_number}</div>
-                                   </div>
-                                   
-                                   {order.tee_size && (
-                                     <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                                       {order.tee_size}
-                                     </span>
-                                   )}
-                                   
-                                   {order.tracking_number && (
-                                     <TooltipProvider>
-                                       <Tooltip>
-                                         <TooltipTrigger>
-                                           <Truck className="w-4 h-4 text-muted-foreground" />
-                                         </TooltipTrigger>
-                                         <TooltipContent className="bg-background border shadow-lg">
-                                           <div className="text-xs space-y-1">
-                                             <div><strong>Carrier:</strong> {order.shipping_carrier || 'Not specified'}</div>
-                                             <div><strong>Tracking:</strong> {order.tracking_number}</div>
-                                           </div>
-                                         </TooltipContent>
-                                       </Tooltip>
-                                     </TooltipProvider>
-                                   )}
-                                 </div>
-                               ))}
-                            </div>
-                          ) : "-"}
-                        </TableCell>
-                       <TableCell>
-                         <div className="flex items-center gap-2">
-                           {user.order_submitted && (
-                             <>
-                               <Button
-                                 size="sm"
-                                 variant="outline"
-                                 onClick={() => resetOrderPermission(user.id)}
-                               >
-                                 <RotateCcw className="w-4 h-4 mr-1" />
-                                 Reset
-                               </Button>
-                               
-                               {user.orders && user.orders.length > 0 && (
-                                 <DropdownMenu>
-                                   <DropdownMenuTrigger asChild>
-                                     <Button variant="outline" size="sm">
-                                       <MoreHorizontal className="w-4 h-4" />
-                                     </Button>
-                                   </DropdownMenuTrigger>
-                                     <DropdownMenuContent align="end" className="w-48 bg-background border z-50">
-                                       {user.orders.map((order) => (
-                                         <React.Fragment key={order.id}>
-                                           <DropdownMenuItem 
-                                             onClick={() => setEditingShipping({
-                                               orderId: order.id, 
-                                               tracking: order.tracking_number || '',
-                                               carrier: order.shipping_carrier || ''
-                                             })}
-                                           >
-                                              <Edit className="w-4 h-4 mr-2" />
-                                              Edit Tracking
-                                           </DropdownMenuItem>
-                                           {order.tracking_number && (
-                                             <DropdownMenuItem 
-                                               onClick={() => sendTrackingNotification(order.id)}
-                                             >
-                                               <Truck className="w-4 h-4 mr-2" />
-                                               Send Tracking Email
-                                             </DropdownMenuItem>
-                                           )}
-                                         </React.Fragment>
-                                       ))}
-                                     </DropdownMenuContent>
-                                 </DropdownMenu>
-                               )}
-                             </>
-                           )}
-                         </div>
-                       </TableCell>
+                      <TableCell>
+                        {order?.date_submitted 
+                          ? new Date(order.date_submitted).toLocaleDateString()
+                          : '-'
+                        }
+                      </TableCell>
+                      <TableCell>{order?.order_number || '-'}</TableCell>
+                      <TableCell>{order?.tee_size || '-'}</TableCell>
+                      <TableCell>
+                        {order ? (
+                          <div className="text-sm">
+                            {editingShipping?.orderId === order.id ? (
+                              <div className="space-y-2 min-w-[200px]">
+                                <Input
+                                  placeholder="Tracking number"
+                                  value={editingShipping.tracking}
+                                  onChange={(e) => setEditingShipping({
+                                    ...editingShipping,
+                                    tracking: e.target.value
+                                  })}
+                                  className="text-xs"
+                                />
+                                <Select
+                                  value={editingShipping.carrier}
+                                  onValueChange={(value) => setEditingShipping({
+                                    ...editingShipping,
+                                    carrier: value
+                                  })}
+                                >
+                                  <SelectTrigger className="text-xs">
+                                    <SelectValue placeholder="Select carrier" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="UPS">UPS</SelectItem>
+                                    <SelectItem value="FedEx">FedEx</SelectItem>
+                                    <SelectItem value="USPS">USPS</SelectItem>
+                                    <SelectItem value="DHL">DHL</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <div className="flex gap-1">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateShippingInfo(order.id, editingShipping.tracking, editingShipping.carrier)}
+                                    className="text-xs px-2 py-1 h-6"
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditingShipping(null)}
+                                    className="text-xs px-2 py-1 h-6"
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <div className="font-medium">
+                                  {order.tracking_number || 'No tracking'}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {order.shipping_carrier || 'No carrier'}
+                                </div>
+                                <div className="flex gap-1 mt-1">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setEditingShipping({
+                                      orderId: order.id,
+                                      tracking: order.tracking_number || '',
+                                      carrier: order.shipping_carrier || ''
+                                    })}
+                                    className="text-xs px-2 py-1 h-6"
+                                  >
+                                    <Edit className="w-3 h-3" />
+                                  </Button>
+                                  {order.tracking_number && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => sendTrackingNotification(order.id)}
+                                            className="text-xs px-2 py-1 h-6"
+                                          >
+                                            <Truck className="w-3 h-3" />
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Send tracking notification</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          '-'
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {user.order_submitted && (
+                              <DropdownMenuItem
+                                onClick={() => resetOrderPermission(user.id)}
+                                className="text-amber-600"
+                              >
+                                <RotateCcw className="mr-2 h-4 w-4" />
+                                Reset Order Permission
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
-            {filteredUsers.length === 0 && searchQuery && (
-              <div className="text-center py-8 text-muted-foreground">
-                No users found matching "{searchQuery}"
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
-
-      {/* Combined Shipping Info Edit Dialog */}
-      <Dialog open={!!editingShipping} onOpenChange={() => setEditingShipping(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Tracking</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="carrier">Shipping Carrier</Label>
-              <Select
-                value={editingShipping?.carrier || ''}
-                onValueChange={(value) => setEditingShipping(prev => prev ? {...prev, carrier: value} : null)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select carrier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="FedEx">FedEx</SelectItem>
-                  <SelectItem value="UPS">UPS</SelectItem>
-                  <SelectItem value="USPS">USPS</SelectItem>
-                  <SelectItem value="DHL">DHL</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label htmlFor="tracking">Tracking Number</Label>
-              <Input
-                id="tracking"
-                value={editingShipping?.tracking || ''}
-                onChange={(e) => setEditingShipping(prev => prev ? {...prev, tracking: e.target.value} : null)}
-                placeholder="Enter tracking number"
-              />
-            </div>
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setEditingShipping(null)}>
-                Cancel
-              </Button>
-              <Button onClick={() => {
-                if (editingShipping) {
-                  updateShippingInfo(editingShipping.orderId, editingShipping.tracking, editingShipping.carrier);
-                }
-              }}>
-                Save
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
