@@ -72,17 +72,31 @@ serve(async (req) => {
     // Fetch order data including tee size and order number using the profile.id
     let teeSize = null;
     let orderNumber = null;
-    if (orderId && profile?.id) {
-      const { data: orderData, error: orderErr } = await supabase
+    if (profile?.id) {
+      console.log(`Looking for order with orderId: ${orderId} and user_id: ${profile.id}`);
+      
+      let orderQuery = supabase
         .from("orders")
         .select("tee_size, order_number")
-        .eq("id", orderId)
         .eq("user_id", profile.id)
-        .maybeSingle();
+        .order("date_submitted", { ascending: false })
+        .limit(1);
+      
+      // If orderId is provided, use it for more precise lookup
+      if (orderId) {
+        orderQuery = orderQuery.eq("id", orderId);
+      }
+      
+      const { data: orderData, error: orderErr } = await orderQuery.maybeSingle();
+      
+      console.log("Order query result:", { orderData, orderErr });
       
       if (!orderErr && orderData) {
         teeSize = orderData.tee_size;
         orderNumber = orderData.order_number;
+        console.log(`Found order data: teeSize=${teeSize}, orderNumber=${orderNumber}`);
+      } else {
+        console.log("No order data found or error occurred");
       }
     }
 

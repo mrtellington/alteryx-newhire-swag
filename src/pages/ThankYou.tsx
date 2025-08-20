@@ -15,7 +15,11 @@ export default function ThankYou() {
   useEffect(() => {
     // Only run the check if we're actually on the thank-you page
     if (location.pathname === '/thank-you') {
-      checkUserAndOrder();
+      // Add a small delay to prevent flashing
+      const timer = setTimeout(() => {
+        checkUserAndOrder();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [location.pathname]);
 
