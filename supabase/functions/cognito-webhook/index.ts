@@ -195,9 +195,124 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    let authUserId = null;
+    if (existingUser) {
+      console.log(`User already exists: ${emailLower}`);
+      
+      // If existing user doesn't have auth_user_id, we'll create one after creating shipping address
+      if (!existingUser.auth_user_id) {
+        console.log('Existing user needs auth capabilities, will create after address update');
+      } else {
+        return new Response(
+          JSON.stringify({ 
+            success: true,
+            message: 'User already exists with login capabilities',
+            user: {
+              email: existingUser.email,
+              invited: existingUser.invited,
+              canLogin: true
+            }
+          }),
+          { 
+            status: 200, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
+    }
 
-    // Create Supabase Auth user if one doesn't exist or if existing user has no auth_user_id
+    // Create shipping address object from form data if available
+    const shippingAddress: any = {};
+    
+    // Map common address fields
+    if (formData.address || formData.Address) {
+      shippingAddress.line1 = formData.address || formData.Address;
+    }
+    if (formData.city || formData.City) {
+      shippingAddress.city = formData.city || formData.City;
+    }
+    if (formData.state || formData.State) {
+      shippingAddress.region = formData.state || formData.State;
+    }
+    if (formData.zipCode || formData.ZipCode || formData.zip || formData.Zip) {
+      shippingAddress.postal_code = formData.zipCode || formData.ZipCode || formData.zip || formData.Zip;
+    }
+    if (formData.country || formData.Country) {
+      shippingAddress.country = formData.country || formData.Country;
+    }
+    if (formData.phone || formData.Phone) {
+      shippingAddress.phone = formData.phone || formData.Phone;
+    }
+
+    // Call the database function to create/update the user first (this satisfies the auth trigger validation)
+    console.log('About to call create_user_from_webhook with:', {
+      user_email: emailLower,
+      user_full_name: fullName || null,
+      user_first_name: firstName || null,
+      user_last_name: lastName || null,
+      user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
+      auth_user_id: null // We'll create the auth user after the database record exists
+    });
+    
+    const { data: result, error: rpcError } = await supabase
+      .rpc('create_user_from_webhook', {
+        user_email: emailLower,
+        user_full_name: fullName || null,
+        user_first_name: firstName || null,
+        user_last_name: lastName || null,
+        user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
+        auth_user_id: null
+      });
+    
+    console.log('RPC result:', result);
+
+    if (rpcError) {
+      console.error('RPC error:', rpcError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Database RPC error',
+          message: rpcError.message
+        }),
+        { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    // Handle the JSONB response from the function
+    if (result?.createError) {
+      console.error('Error creating user:', result.createError);
+      
+      if (result.createError.code === 'INVALID_DOMAIN') {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid email domain',
+            message: result.createError.message
+          }),
+          { 
+            status: 400, 
+            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to create user',
+          message: result.createError.message,
+          details: result.createError
+        }),
+        { 
+          status: 500, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    // Now that the user exists in the database, create the auth user if needed
+    let authUserId = null;
+    
+    // Check if we need to create auth user (for new users or existing users without auth)
     if (!existingUser || !existingUser.auth_user_id) {
       console.log(`Creating Supabase Auth user for: ${emailLower}`);
       
@@ -246,130 +361,21 @@ const handler = async (req: Request): Promise<Response> => {
       
       if (!authUserId) {
         console.error('Failed to create or find auth user after all attempts');
-        // For imported users, we want them to have login capabilities, so this is more critical
-        throw new Error('Failed to create authentication user - users imported via admin must have login capabilities');
-      }
-    }
-
-    if (existingUser) {
-      console.log(`User already exists: ${emailLower}`);
-      
-      // If we just created an auth user, update the existing record
-      if (authUserId) {
+        console.log('User database record created successfully, but without login capabilities');
+      } else {
+        // Update the database user record with the auth_user_id
+        console.log('Updating database user record with auth_user_id');
         const { error: updateError } = await supabase
           .from('users')
           .update({ auth_user_id: authUserId })
-          .eq('id', existingUser.id);
+          .eq('id', result.userId);
           
         if (updateError) {
           console.error('Error updating user with auth_user_id:', updateError);
+        } else {
+          console.log('Successfully linked auth user to database user');
         }
       }
-      
-      return new Response(
-        JSON.stringify({ 
-          success: true,
-          message: authUserId ? 'User updated with auth capabilities' : 'User already exists in the system',
-          user: {
-            email: existingUser.email,
-            invited: existingUser.invited,
-            canLogin: Boolean(authUserId || existingUser.auth_user_id)
-          }
-        }),
-        { 
-          status: 200, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
-
-    // Create shipping address object from form data if available
-    const shippingAddress: any = {};
-    
-    // Map common address fields
-    if (formData.address || formData.Address) {
-      shippingAddress.line1 = formData.address || formData.Address;
-    }
-    if (formData.city || formData.City) {
-      shippingAddress.city = formData.city || formData.City;
-    }
-    if (formData.state || formData.State) {
-      shippingAddress.region = formData.state || formData.State;
-    }
-    if (formData.zipCode || formData.ZipCode || formData.zip || formData.Zip) {
-      shippingAddress.postal_code = formData.zipCode || formData.ZipCode || formData.zip || formData.Zip;
-    }
-    if (formData.country || formData.Country) {
-      shippingAddress.country = formData.country || formData.Country;
-    }
-    if (formData.phone || formData.Phone) {
-      shippingAddress.phone = formData.phone || formData.Phone;
-    }
-
-    // Call the database function to create the user
-    console.log('About to call create_user_from_webhook with:', {
-      user_email: emailLower,
-      user_full_name: fullName || null,
-      user_first_name: firstName || null,
-      user_last_name: lastName || null,
-      user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
-      auth_user_id: authUserId
-    });
-    
-    const { data: result, error: rpcError } = await supabase
-      .rpc('create_user_from_webhook', {
-        user_email: emailLower,
-        user_full_name: fullName || null,
-        user_first_name: firstName || null,
-        user_last_name: lastName || null,
-        user_shipping_address: Object.keys(shippingAddress).length > 0 ? shippingAddress : null,
-        auth_user_id: authUserId
-      });
-    
-    console.log('RPC result:', result);
-
-    if (rpcError) {
-      console.error('RPC error:', rpcError);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Database RPC error',
-          message: rpcError.message
-        }),
-        { 
-          status: 500, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
-
-    // Handle the JSONB response from the function
-    if (result?.createError) {
-      console.error('Error creating user:', result.createError);
-      
-      if (result.createError.code === 'INVALID_DOMAIN') {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Invalid email domain',
-            message: result.createError.message
-          }),
-          { 
-            status: 400, 
-            headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-          }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ 
-          error: 'Failed to create user',
-          message: result.createError.message,
-          details: result.createError
-        }),
-        { 
-          status: 500, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
     }
 
     console.log(`User processed successfully: ${emailLower}, ID: ${result.userId}, Message: ${result.message}`);
