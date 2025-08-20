@@ -60,24 +60,24 @@ serve(async (req) => {
     const user = userRes.user;
     const userEmail = user.email || "";
 
-    // Fetch profile for shipping address and full name (RLS allows own row)
+    // Fetch profile for shipping address and full name using auth_user_id
     const { data: profile, error: profErr } = await supabase
       .from("users")
-      .select("full_name, shipping_address")
-      .eq("id", user.id)
+      .select("id, full_name, shipping_address")
+      .eq("auth_user_id", user.id)
       .maybeSingle();
 
     if (profErr) throw profErr;
 
-    // Fetch order data including tee size and order number
+    // Fetch order data including tee size and order number using the profile.id
     let teeSize = null;
     let orderNumber = null;
-    if (orderId) {
+    if (orderId && profile?.id) {
       const { data: orderData, error: orderErr } = await supabase
         .from("orders")
         .select("tee_size, order_number")
         .eq("id", orderId)
-        .eq("user_id", user.id)
+        .eq("user_id", profile.id)
         .maybeSingle();
       
       if (!orderErr && orderData) {

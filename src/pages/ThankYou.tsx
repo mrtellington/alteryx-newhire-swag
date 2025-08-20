@@ -28,11 +28,11 @@ export default function ThankYou() {
         return;
       }
 
-      // Get user data
+      // Get user data by auth_user_id
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
-        .eq("id", session.user.id)
+        .eq("auth_user_id", session.user.id)
         .single();
 
       if (userError) throw userError;
@@ -45,11 +45,11 @@ export default function ThankYou() {
         return;
       }
 
-      // Get order information with tee size
+      // Get order information with tee size using the userData.id (the actual user table id)
       const { data: orderData, error: orderError } = await supabase
         .from("orders")
         .select("*, tee_size")
-        .eq("user_id", session.user.id)
+        .eq("user_id", userData.id)
         .order("date_submitted", { ascending: false })
         .limit(1)
         .single();
