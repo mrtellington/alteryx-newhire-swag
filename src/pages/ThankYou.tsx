@@ -58,24 +58,32 @@ export default function ThankYou() {
 
         console.log("ThankYou: User has ordered, fetching order details...");
         // Get order information with tee size using the userData.id (the actual user table id)
+        // Add a small delay to ensure order is committed
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
           .select("*, tee_size")
           .eq("user_id", userData.id)
           .order("date_submitted", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (!mounted) return;
 
         if (orderError) {
           console.error("ThankYou: Order lookup error:", orderError);
-          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 200);
-          return;
+          // Don't redirect if user has submitted an order but we can't find it yet
+          // This could be a timing issue, so just show the page without order details
+          console.log("ThankYou: Order lookup failed but user has ordered, showing page anyway");
+          setOrderInfo(null);
+        } else if (orderData) {
+          console.log("ThankYou: Order found:", orderData);
+          setOrderInfo(orderData);
+        } else {
+          console.log("ThankYou: No order found but user has ordered flag set");
+          setOrderInfo(null);
         }
-
-        console.log("ThankYou: Order found:", orderData);
-        setOrderInfo(orderData);
       } catch (error) {
         if (!mounted) return;
         console.error("ThankYou: Error checking user and order:", error);
