@@ -214,7 +214,7 @@ export default function Shop() {
               <CardDescription>We’ll ship your gift here</CardDescription>
             </CardHeader>
             <CardContent>
-              <ShippingAddressForm selectedSize={selectedSize} onSuccess={() => navigate("/thank-you", { replace: true })} />
+              <ShippingAddressForm selectedSize={selectedSize} onSuccess={() => navigate("/thank-you", { replace: true, state: { fromSubmission: true } })} />
             </CardContent>
           </Card>
         )}

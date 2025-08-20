@@ -49,8 +49,8 @@ export default function ThankYou() {
         console.log("ThankYou: User data found:", userData);
         setUser(userData);
 
-        // If user hasn't ordered, redirect to shop
-        if (!userData.order_submitted) {
+        // If user hasn't ordered, redirect to shop (but only if we're sure - not on first load)
+        if (!userData.order_submitted && !location.state?.fromSubmission) {
           console.log("ThankYou: User has not submitted order, redirecting to shop");
           navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 200);
           return;
