@@ -57,6 +57,8 @@ export default function ThankYou() {
         }
 
         console.log("ThankYou: User has ordered, fetching order details...");
+        console.log("ThankYou: userData.id:", userData.id, "auth_user_id:", userData.auth_user_id);
+        
         // Get order information with tee size using the userData.id (the actual user table id)
         // Add a small delay to ensure order is committed
         await new Promise(resolve => setTimeout(resolve, 1000));

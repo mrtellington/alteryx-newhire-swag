@@ -66,22 +66,30 @@ serve(async (req) => {
     // Fetch profile for shipping address and full name using auth_user_id
     const { data: profile, error: profErr } = await supabase
       .from("users")
-      .select("id, full_name, shipping_address")
+      .select("id, full_name, shipping_address, email")
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
     if (profErr) throw profErr;
+    
+    if (!profile) {
+      console.log("No profile found for auth_user_id:", user.id);
+      throw new Error("User profile not found");
+    }
+
+    console.log("Found profile:", { id: profile.id, email: profile.email });
 
     // Fetch order data including tee size and order number using the profile.id
     let teeSize = null;
     let orderNumber = null;
-    if (profile?.id) {
-      console.log(`Looking for order with orderId: ${orderId} and user_id: ${profile.id}`);
-      
-      let orderQuery = supabase
-        .from("orders")
-        .select("id, tee_size, order_number, date_submitted")
-        .eq("user_id", profile.id);
+    let orderDate = null;
+    
+    console.log(`Looking for order with orderId: ${orderId} and user_id: ${profile.id}`);
+    
+    let orderQuery = supabase
+      .from("orders")
+      .select("id, tee_size, order_number, date_submitted")
+      .eq("user_id", profile.id);
       
       // If orderId is provided, use it for more precise lookup, otherwise get the latest
       if (orderId) {
@@ -97,7 +105,8 @@ serve(async (req) => {
       if (!orderErr && orderData) {
         teeSize = orderData.tee_size;
         orderNumber = orderData.order_number;
-        console.log(`Found order data: teeSize=${teeSize}, orderNumber=${orderNumber}, orderId=${orderData.id}`);
+        orderDate = orderData.date_submitted;
+        console.log(`Found order data: teeSize=${teeSize}, orderNumber=${orderNumber}, orderId=${orderData.id}, date=${orderDate}`);
       } else {
         console.log("No order data found or error occurred:", orderErr);
         // If no specific order found but user has orders, get the latest
@@ -113,11 +122,13 @@ serve(async (req) => {
           if (!latestErr && latestOrder) {
             teeSize = latestOrder.tee_size;
             orderNumber = latestOrder.order_number;
-            console.log(`Found latest order: teeSize=${teeSize}, orderNumber=${orderNumber}, orderId=${latestOrder.id}`);
+            orderDate = latestOrder.date_submitted;
+            console.log(`Found latest order: teeSize=${teeSize}, orderNumber=${orderNumber}, orderId=${latestOrder.id}, date=${orderDate}`);
+          } else {
+            console.log("Could not find any orders for user:", profile.id);
           }
         }
       }
-    }
 
     const fullName = profile?.full_name || userEmail.split("@")[0];
     const shippingHtml = formatAddress(profile?.shipping_address);
