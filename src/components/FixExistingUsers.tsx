@@ -9,57 +9,42 @@ export const FixExistingUsers = () => {
   const fixExistingUsers = async () => {
     setFixing(true);
     
-    const usersToFix = [
-      {
-        email: 'christian.houston@whitestonebranding.com',
-        full_name: 'Christian Houston',
-        first_name: 'Christian',
-        last_name: 'Houston'
-      },
-      {
-        email: 'tejal.makuck@whitestonebranding.com',
-        full_name: 'Tejal Makuck',
-        first_name: 'Tejal',
-        last_name: 'Makuck'
-      }
-    ];
+    try {
+      console.log('Creating auth users for existing users...');
+      
+      const { data, error } = await supabase.functions.invoke('create-auth-users', {});
 
-    let results = [];
-    
-    for (const user of usersToFix) {
-      try {
-        console.log(`Running webhook for: ${user.email}`);
+      if (error) {
+        console.error('Error creating auth users:', error);
+        toast.error(`Failed to create auth users: ${error.message}`);
+      } else {
+        console.log('Auth user creation results:', data);
+        const successCount = data.results?.filter((r: any) => r.success).length || 0;
+        const errorCount = data.results?.filter((r: any) => !r.success).length || 0;
         
-        const { data, error } = await supabase.functions.invoke('cognito-webhook', {
-          body: user
-        });
-
-        if (error) {
-          console.error(`Error for ${user.email}:`, error);
-          results.push(`❌ ${user.email}: ${error.message}`);
-        } else {
-          console.log(`Success for ${user.email}:`, data);
-          results.push(`✅ ${user.email}: ${data.canLogin ? 'Can login' : 'Auth setup incomplete'}`);
+        toast.success(`Processed ${data.processed} users. ${successCount} successful, ${errorCount} errors.`);
+        
+        if (errorCount > 0) {
+          console.log('Errors:', data.results?.filter((r: any) => !r.success));
         }
-      } catch (err) {
-        console.error(`Exception for ${user.email}:`, err);
-        results.push(`❌ ${user.email}: Exception occurred`);
       }
+    } catch (err) {
+      console.error('Exception creating auth users:', err);
+      toast.error('Exception occurred while creating auth users');
+    } finally {
+      setFixing(false);
     }
-
-    toast.success(`Results:\n${results.join('\n')}`);
-    setFixing(false);
   };
 
   return (
     <div className="p-4 border rounded-lg bg-yellow-50">
       <h3 className="text-lg font-semibold mb-2">One-time Fix for Existing Users</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        This will create auth accounts for Christian and Tejal so they can login. 
+        This will create auth accounts for all users missing them so they can login. 
         Remove this component after running once.
       </p>
       <Button onClick={fixExistingUsers} disabled={fixing} variant="outline">
-        {fixing ? 'Processing...' : 'Fix Christian & Tejal Auth'}
+        {fixing ? 'Processing...' : 'Create Missing Auth Users'}
       </Button>
     </div>
   );
