@@ -12,6 +12,9 @@ serve(async (req) => {
   }
 
   try {
+    const body = await req.json().catch(() => ({}));
+    const singleEmail = body.single_email;
+
     // Use service role key for admin operations
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -25,10 +28,17 @@ serve(async (req) => {
     );
 
     // Get users without auth_user_id
-    const { data: usersNeedingAuth, error: fetchError } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('users')
       .select('id, email, full_name, first_name, last_name')
       .is('auth_user_id', null);
+    
+    // If single_email is provided, filter for just that user
+    if (singleEmail) {
+      query = query.eq('email', singleEmail);
+    }
+    
+    const { data: usersNeedingAuth, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('Error fetching users:', fetchError);
