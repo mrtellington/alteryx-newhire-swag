@@ -155,10 +155,15 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
       if (rpcErr) throw rpcErr;
 
       const orderIdStr = orderId as unknown as string;
+      console.log("Order placed successfully:", { orderId: orderIdStr, selectedSize });
+
+      // Wait a moment to ensure order is committed before sending email
+      await new Promise(resolve => setTimeout(resolve, 500));
 
       // Fire-and-forget email confirmation (do not block success)
       supabase.functions
         .invoke("send-order-confirmation", { body: { orderId: orderIdStr } })
+        .then(result => console.log("Email confirmation result:", result))
         .catch((e) => console.error("send-order-confirmation failed", e));
 
       await logSecurityEvent('order_placed_successfully', {

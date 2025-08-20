@@ -36,12 +36,15 @@ serve(async (req) => {
   console.log(`Order confirmation request: ${req.method} for user ${req.headers.get('authorization') ? 'authenticated' : 'anonymous'}`);
 
   try {
+    const requestBody = await req.json().catch(() => ({}));
+    console.log("Request body received:", requestBody);
+
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
       throw new Error("Missing RESEND_API_KEY secret");
     }
 
-    const { orderId }: SendOrderBody = await req.json().catch(() => ({}));
+    const { orderId }: SendOrderBody = requestBody;
 
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "");

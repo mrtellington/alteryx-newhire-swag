@@ -15,18 +15,22 @@ export default function ThankYou() {
 
   useEffect(() => {
     let mounted = true;
+    let navigationTimeout: NodeJS.Timeout;
     
     const checkUserAndOrder = async () => {
       try {
+        console.log("ThankYou: Starting auth check...");
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!mounted) return;
         
         if (!session) {
-          navigate("/auth", { replace: true });
+          console.log("ThankYou: No session, redirecting to auth");
+          navigationTimeout = setTimeout(() => navigate("/auth", { replace: true }), 100);
           return;
         }
 
+        console.log("ThankYou: Session found, checking user data...");
         // Get user data by auth_user_id
         const { data: userData, error: userError } = await supabase
           .from("users")
@@ -37,20 +41,22 @@ export default function ThankYou() {
         if (!mounted) return;
 
         if (userError) {
-          console.error("User lookup error:", userError);
-          navigate("/shop", { replace: true });
+          console.error("ThankYou: User lookup error:", userError);
+          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
           return;
         }
 
+        console.log("ThankYou: User data found:", userData);
         setUser(userData);
 
         // If user hasn't ordered, redirect to shop
         if (!userData.order_submitted) {
-          console.log("User has not submitted order, redirecting to shop");
-          navigate("/shop", { replace: true });
+          console.log("ThankYou: User has not submitted order, redirecting to shop");
+          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
           return;
         }
 
+        console.log("ThankYou: User has ordered, fetching order details...");
         // Get order information with tee size using the userData.id (the actual user table id)
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
@@ -63,19 +69,20 @@ export default function ThankYou() {
         if (!mounted) return;
 
         if (orderError) {
-          console.error("Order lookup error:", orderError);
-          navigate("/shop", { replace: true });
+          console.error("ThankYou: Order lookup error:", orderError);
+          navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
           return;
         }
 
-        console.log("Order found:", orderData);
+        console.log("ThankYou: Order found:", orderData);
         setOrderInfo(orderData);
       } catch (error) {
         if (!mounted) return;
-        console.error("Error checking user and order:", error);
-        navigate("/shop", { replace: true });
+        console.error("ThankYou: Error checking user and order:", error);
+        navigationTimeout = setTimeout(() => navigate("/shop", { replace: true }), 100);
       } finally {
         if (mounted) {
+          console.log("ThankYou: Setting loading to false");
           setLoading(false);
           setCheckingAuth(false);
         }
@@ -84,11 +91,19 @@ export default function ThankYou() {
 
     // Only run the check if we're actually on the thank-you page
     if (location.pathname === '/thank-you') {
+      console.log("ThankYou: On thank-you page, starting check...");
       checkUserAndOrder();
+    } else {
+      console.log("ThankYou: Not on thank-you page, path:", location.pathname);
+      setLoading(false);
+      setCheckingAuth(false);
     }
 
     return () => {
       mounted = false;
+      if (navigationTimeout) {
+        clearTimeout(navigationTimeout);
+      }
     };
   }, [location.pathname, navigate]);
 
