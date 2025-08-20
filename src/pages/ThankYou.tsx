@@ -59,11 +59,11 @@ export default function ThankYou() {
         console.log("ThankYou: User has ordered, fetching order details...");
         // Get order information with tee size using the userData.id (the actual user table id)
         // Add a small delay to ensure order is committed
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         const { data: orderData, error: orderError } = await supabase
           .from("orders")
-          .select("*, tee_size")
+          .select("*")
           .eq("user_id", userData.id)
           .order("date_submitted", { ascending: false })
           .limit(1)
@@ -73,10 +73,23 @@ export default function ThankYou() {
 
         if (orderError) {
           console.error("ThankYou: Order lookup error:", orderError);
-          // Don't redirect if user has submitted an order but we can't find it yet
-          // This could be a timing issue, so just show the page without order details
-          console.log("ThankYou: Order lookup failed but user has ordered, showing page anyway");
-          setOrderInfo(null);
+          // Try once more with a longer delay
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          const { data: retryOrderData, error: retryError } = await supabase
+            .from("orders")
+            .select("*")
+            .eq("user_id", userData.id)
+            .order("date_submitted", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (!retryError && retryOrderData) {
+            console.log("ThankYou: Order found on retry:", retryOrderData);
+            setOrderInfo(retryOrderData);
+          } else {
+            console.error("ThankYou: Order still not found after retry:", retryError);
+            setOrderInfo(null);
+          }
         } else if (orderData) {
           console.log("ThankYou: Order found:", orderData);
           setOrderInfo(orderData);
@@ -163,10 +176,12 @@ export default function ThankYou() {
                   </div>
                 </div>
                 {orderInfo.tee_size && (
-                  <div>
-                    <strong>Tee Size:</strong>
-                    <div className="text-muted-foreground">{orderInfo.tee_size}</div>
-                  </div>
+                  <>
+                    <div>
+                      <strong>Tee Size:</strong>
+                      <div className="text-muted-foreground">{orderInfo.tee_size}</div>
+                    </div>
+                  </>
                 )}
               </div>
               
