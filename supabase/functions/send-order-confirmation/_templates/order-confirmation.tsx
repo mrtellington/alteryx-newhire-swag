@@ -74,7 +74,7 @@ export const OrderConfirmationEmail = ({
               • Alteryx hat<br/>
               • Alteryx stickers<br/>
               • Alteryx water bottle<br/>
-              • Alteryx t-shirt (size: {teeSize || 'selected'})
+              • Alteryx t-shirt{teeSize ? ` (size: ${teeSize})` : ''}
             </Text>
             {orderId && (
               <Text style={text}>

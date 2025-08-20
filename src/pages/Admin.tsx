@@ -14,8 +14,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal, Truck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
-import { TestUserLogin } from "@/components/TestUserLogin";
-import { FixExistingUsers } from "@/components/FixExistingUsers";
 import { useSessionSecurity } from "@/hooks/useSessionSecurity";
 
 
@@ -752,10 +750,6 @@ export default function Admin() {
           </p>
         </CardContent>
       </Card>
-
-      <FixExistingUsers />
-
-      <TestUserLogin />
 
       <Card>
         <CardHeader>

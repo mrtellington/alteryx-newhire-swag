@@ -142,27 +142,45 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Extract and normalize names
-    const fullName = (
-      formData.full_name ||
-      formData['Full Name'] ||
-      formData.Name ||
-      ''
-    ).trim();
+    // Extract and normalize names - handle object format from Cognito Forms
+    let fullName = '';
+    let firstName = '';
+    let lastName = '';
 
-    const firstName = (
-      formData.first_name ||
-      formData['First Name'] ||
-      formData.FirstName ||
-      ''
-    ).trim();
+    // Handle Name object from Cognito Forms
+    if (formData.Name && typeof formData.Name === 'object') {
+      firstName = (formData.Name.First || '').toString().trim();
+      lastName = (formData.Name.Last || '').toString().trim();
+      fullName = (formData.Name.FirstAndLast || `${firstName} ${lastName}`.trim()).toString().trim();
+    }
 
-    const lastName = (
-      formData.last_name ||
-      formData['Last Name'] ||
-      formData.LastName ||
-      ''  
-    ).trim();
+    // Fallback to string fields
+    if (!fullName) {
+      fullName = (
+        formData.full_name ||
+        formData['Full Name'] ||
+        (typeof formData.Name === 'string' ? formData.Name : '') ||
+        ''
+      ).toString().trim();
+    }
+
+    if (!firstName) {
+      firstName = (
+        formData.first_name ||
+        formData['First Name'] ||
+        formData.FirstName ||
+        ''
+      ).toString().trim();
+    }
+
+    if (!lastName) {
+      lastName = (
+        formData.last_name ||
+        formData['Last Name'] ||
+        formData.LastName ||
+        ''  
+      ).toString().trim();
+    }
 
     // Parse names intelligently
     let parsedFirstName = firstName;
