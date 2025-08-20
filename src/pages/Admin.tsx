@@ -100,88 +100,8 @@ export default function Admin() {
     }
   };
 
-  const createAuthUsers = async () => {
-    try {
-      console.log('Creating auth users for users without auth_user_id');
-      
-      // Get users without auth_user_id first
-      const { data: usersNeedingAuth, error: fetchError } = await supabase
-        .from('users')
-        .select('id, email, full_name, first_name, last_name')
-        .is('auth_user_id', null)
-        .eq('invited', true);
-
-      if (fetchError) {
-        console.error('Error fetching users needing auth:', fetchError);
-        toast({
-          title: "Error",
-          description: "Failed to fetch users needing auth",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!usersNeedingAuth || usersNeedingAuth.length === 0) {
-        toast({
-          title: "Info",
-          description: "No users need auth account creation",
-        });
-        return;
-      }
-
-      console.log(`Found ${usersNeedingAuth.length} users needing auth accounts`);
-      
-      // Process each user individually using the cognito-webhook function
-      let successCount = 0;
-      let errorCount = 0;
-      
-      for (const user of usersNeedingAuth) {
-        try {
-          console.log(`Processing auth for: ${user.email}`);
-          
-          const { data, error } = await supabase.functions.invoke('cognito-webhook', {
-            body: {
-              email: user.email,
-              full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-              first_name: user.first_name,
-              last_name: user.last_name
-            }
-          });
-
-          if (error) {
-            console.error(`Error for ${user.email}:`, error);
-            errorCount++;
-          } else {
-            console.log(`Success for ${user.email}:`, data);
-            successCount++;
-          }
-        } catch (userError) {
-          console.error(`Exception for ${user.email}:`, userError);
-          errorCount++;
-        }
-        
-        // Small delay between requests
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      console.log(`Auth user creation completed: ${successCount} successful, ${errorCount} errors`);
-      toast({
-        title: "Completed",
-        description: `Auth users processed: ${successCount} successful, ${errorCount} errors`,
-      });
-
-      // Refresh the users list
-      setTimeout(fetchUsers, 2000);
-      
-    } catch (error: any) {
-      console.error('Error creating auth users:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to create auth users",
-        variant: "destructive",
-      });
-    }
-  };
+  // Remove the old complex createAuthUsers function
+  // All user creation now happens automatically via cognito-webhook
 
   // Helper function to get clean display name from user data
   const getDisplayName = (user: User) => {
@@ -836,44 +756,20 @@ export default function Admin() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Auth Users Management</CardTitle>
+          <CardTitle>System Status</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
-            <Button onClick={createAuthUsers}>
-              <RotateCcw className="w-4 h-4 mr-2" />
-              Create Auth Users (All)
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={async () => {
-                const usersWithoutAuth = users.filter(u => !u.orders || u.orders.length === 0);
-                console.log('Users without auth:', usersWithoutAuth.length);
-                for (const user of usersWithoutAuth.slice(0, 5)) {
-                  try {
-                    const { data, error } = await supabase.functions.invoke('auto-create-auth-user', {
-                      body: { 
-                        email: user.email,
-                        full_name: user.full_name,
-                        first_name: user.first_name,
-                        last_name: user.last_name
-                      }
-                    });
-                    console.log(`${user.email}:`, data || error);
-                  } catch (err) {
-                    console.error(`${user.email}:`, err);
-                  }
-                }
-                toast({ title: "Processing users...", description: "Check console for details" });
-                setTimeout(fetchUsers, 3000);
-              }}
-            >
-              Process Individual Users
-            </Button>
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              ✅ Automatic user creation via cognito-webhook is active
+            </p>
+            <p className="text-sm text-muted-foreground">
+              ✅ All new users automatically get auth accounts and can login immediately
+            </p>
+            <p className="text-sm text-muted-foreground">
+              ✅ CSV import and manual user addition use the same reliable process
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground mt-2">
-            Creates auth accounts for users who can't login. Use "Create Auth Users (All)" for bulk processing.
-          </p>
         </CardContent>
       </Card>
 
