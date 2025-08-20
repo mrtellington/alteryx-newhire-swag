@@ -148,7 +148,7 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
           last_name: values.last_name,
           full_name: `${values.first_name} ${values.last_name}`
         })
-        .eq("id", userId);
+        .eq("auth_user_id", userId);
       if (updateErr) throw updateErr;
 
       const { data: orderId, error: rpcErr } = await supabase.rpc("place_order", { tee_size_param: selectedSize });
