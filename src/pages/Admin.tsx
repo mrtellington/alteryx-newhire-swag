@@ -100,6 +100,42 @@ export default function Admin() {
     }
   };
 
+  const createAuthUsers = async () => {
+    try {
+      console.log('Creating auth users for users without auth_user_id');
+      
+      const { data, error } = await supabase.functions.invoke('create-auth-users', {
+        body: {}
+      });
+
+      if (error) {
+        console.error('Error creating auth users:', error);
+        toast({
+          title: "Error",
+          description: "Failed to create auth users",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Auth users created successfully:', data);
+      toast({
+        title: "Success",
+        description: `Auth users processed: ${data.processed}`,
+      });
+
+      // Refresh the users list
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error creating auth users:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create auth users",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Helper function to get clean display name from user data
   const getDisplayName = (user: User) => {
     // If we have clean first/last names, use them
@@ -747,6 +783,23 @@ export default function Admin() {
           </div>
           <p className="text-sm text-muted-foreground mt-2">
             Flexible column mapping supports various name formats (e.g., first_name/firstname/fname, last_name/lastname/surname, email/email_address)
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Auth Users Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <Button onClick={createAuthUsers}>
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Create Auth Users
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Links existing auth accounts to users who don't have auth_user_id set
           </p>
         </CardContent>
       </Card>
