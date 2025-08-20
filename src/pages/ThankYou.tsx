@@ -35,12 +35,17 @@ export default function ThankYou() {
         .eq("auth_user_id", session.user.id)
         .single();
 
-      if (userError) throw userError;
+      if (userError) {
+        console.error("User lookup error:", userError);
+        navigate("/shop");
+        return;
+      }
 
       setUser(userData);
 
       // If user hasn't ordered, redirect to shop
       if (!userData.order_submitted) {
+        console.log("User has not submitted order, redirecting to shop");
         navigate("/shop");
         return;
       }
@@ -54,8 +59,13 @@ export default function ThankYou() {
         .limit(1)
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error("Order lookup error:", orderError);
+        navigate("/shop");
+        return;
+      }
 
+      console.log("Order found:", orderData);
       setOrderInfo(orderData);
     } catch (error) {
       console.error("Error checking user and order:", error);
