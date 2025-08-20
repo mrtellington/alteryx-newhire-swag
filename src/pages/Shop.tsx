@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import ShippingAddressForm from "@/components/ShippingAddressForm";
 import { toast } from "@/components/ui/use-toast";
+import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
+import { useSessionSecurity } from "@/hooks/useSessionSecurity";
 
 const isAllowedEmail = (email: string) => {
   const emailTrimmed = email.trim().toLowerCase();
@@ -17,6 +19,13 @@ export default function Shop() {
   const [showForm, setShowForm] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const sizes = useMemo(() => ["XS","S","M","L","XL","2XL","3XL","4XL"], []);
+
+  // Initialize session security monitoring for authenticated users
+  const { trackActivity } = useSessionSecurity({
+    enableAutoExtend: true,
+    enableActivityTracking: true,
+    enableSecurityLogging: false // Less verbose for regular users
+  });
 
   useEffect(() => {
     let mounted = true;
@@ -97,6 +106,7 @@ export default function Shop() {
 
   return (
     <main className="min-h-screen bg-background px-4 py-10">
+      <SessionTimeoutWarning />
       <div className="max-w-6xl mx-auto space-y-8">
 
         <Card className="border-0 shadow-none">

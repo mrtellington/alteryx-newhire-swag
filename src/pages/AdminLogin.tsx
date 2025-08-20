@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { Shield, ArrowLeft } from "lucide-react";
 import { 
   secureEmailSchema, 
-  logSecurityEvent, 
+  logEnhancedSecurityEvent, 
   RateLimiter,
   isValidAdminEmail,
   initializeSecureSession 
@@ -127,7 +127,7 @@ const AdminLogin = () => {
     try {
       secureEmailSchema.parse(email);
     } catch (error) {
-      await logSecurityEvent('admin_login_invalid_email_format', { 
+      await logEnhancedSecurityEvent('admin_login_invalid_email_format', { 
         email: email.substring(0, 20) + '...' 
       });
       toast({
@@ -139,7 +139,7 @@ const AdminLogin = () => {
     }
 
     if (!isValidAdminEmail(email)) {
-      await logSecurityEvent('admin_login_invalid_domain', { 
+      await logEnhancedSecurityEvent('admin_login_invalid_domain', { 
         email: email.substring(0, 20) + '...',
         domain: email.split('@')[1] 
       }, 'high');
@@ -155,7 +155,7 @@ const AdminLogin = () => {
     const rateCheck = adminRateLimiter.checkRateLimit(email);
     if (!rateCheck.allowed) {
       const remainingMinutes = Math.ceil((rateCheck.remainingTime || 0) / 60000);
-      await logSecurityEvent('admin_login_rate_limit_exceeded', { 
+      await logEnhancedSecurityEvent('admin_login_rate_limit_exceeded', { 
         email: email.substring(0, 20) + '...',
         remainingMinutes 
       }, 'high');
@@ -199,7 +199,7 @@ const AdminLogin = () => {
           });
         }
       } else {
-        await logSecurityEvent('admin_login_magic_link_sent', { 
+        await logEnhancedSecurityEvent('admin_login_magic_link_sent', { 
           email: email.substring(0, 20) + '...' 
         });
         toast({

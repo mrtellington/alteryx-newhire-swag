@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit, ChevronDown as ChevronDownIcon, MoreHorizontal, Truck } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import AdminManagement from "@/components/AdminManagement";
+import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
+import { useSessionSecurity } from "@/hooks/useSessionSecurity";
 
 
 interface User {
@@ -59,6 +61,13 @@ export default function Admin() {
   const [editingShipping, setEditingShipping] = useState<{orderId: string, tracking: string, carrier: string} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
+
+  // Initialize session security monitoring
+  const { trackActivity } = useSessionSecurity({
+    enableAutoExtend: true,
+    enableActivityTracking: true,
+    enableSecurityLogging: true
+  });
 
   const sendTrackingNotification = async (orderId: string) => {
     try {
@@ -620,6 +629,7 @@ export default function Admin() {
 
   return (
     <div className="container mx-auto py-8 space-y-6">
+      <SessionTimeoutWarning isAdmin={true} />
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <div className="flex gap-2">

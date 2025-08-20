@@ -202,6 +202,57 @@ export function initializeSecureSession(): void {
   if (!sessionStorage.getItem('session_id')) {
     sessionStorage.setItem('session_id', generateSessionId());
   }
+  
+  // Set session timestamp for timeout tracking
+  if (!sessionStorage.getItem('session_start')) {
+    sessionStorage.setItem('session_start', Date.now().toString());
+  }
+}
+
+// Enhanced session management
+export interface SessionInfo {
+  id: string;
+  startTime: number;
+  lastActivity: number;
+  isExpired: boolean;
+  timeUntilExpiry: number;
+}
+
+export function getSessionInfo(): SessionInfo {
+  const sessionId = sessionStorage.getItem('session_id') || '';
+  const startTime = parseInt(sessionStorage.getItem('session_start') || '0');
+  const lastActivity = parseInt(sessionStorage.getItem('last_activity') || Date.now().toString());
+  const currentTime = Date.now();
+  
+  // 30 minutes session timeout
+  const SESSION_TIMEOUT = 30 * 60 * 1000;
+  const timeUntilExpiry = SESSION_TIMEOUT - (currentTime - lastActivity);
+  const isExpired = timeUntilExpiry <= 0;
+  
+  return {
+    id: sessionId,
+    startTime,
+    lastActivity,
+    isExpired,
+    timeUntilExpiry: Math.max(0, timeUntilExpiry)
+  };
+}
+
+export function updateSessionActivity(): void {
+  sessionStorage.setItem('last_activity', Date.now().toString());
+}
+
+export function shouldWarnSessionExpiry(): boolean {
+  const sessionInfo = getSessionInfo();
+  // Warn when 5 minutes remaining
+  return sessionInfo.timeUntilExpiry > 0 && sessionInfo.timeUntilExpiry <= 5 * 60 * 1000;
+}
+
+export function clearSecureSession(): void {
+  sessionStorage.removeItem('session_id');
+  sessionStorage.removeItem('session_start');
+  sessionStorage.removeItem('last_activity');
+  sessionStorage.removeItem('csrf_token');
 }
 
 // Content Security Policy helpers
@@ -222,4 +273,97 @@ export function generateCSRFToken(): string {
 
 export function validateCSRFToken(token: string, storedToken: string): boolean {
   return token === storedToken && token.length === 64;
+}
+
+export function getOrCreateCSRFToken(): string {
+  let token = sessionStorage.getItem('csrf_token');
+  if (!token) {
+    token = generateCSRFToken();
+    sessionStorage.setItem('csrf_token', token);
+  }
+  return token;
+}
+
+// IP and Geolocation Security
+export async function checkIPReputation(ip: string): Promise<boolean> {
+  // Basic IP validation - in production, integrate with threat intelligence
+  const privateIPRanges = [
+    /^127\./,
+    /^192\.168\./,
+    /^10\./,
+    /^172\.(1[6-9]|2[0-9]|3[0-1])\./,
+    /^::1$/,
+    /^fc00:/,
+    /^fe80:/
+  ];
+  
+  // Allow private IPs (development) but log public IP checks
+  if (privateIPRanges.some(range => range.test(ip))) {
+    return true;
+  }
+  
+  // In production, implement actual IP reputation checking
+  // For now, just log suspicious patterns
+  const suspiciousPatterns = [
+    /^(tor-exit|proxy|vpn)/i,
+    /^(malware|botnet|spam)/i
+  ];
+  
+  return !suspiciousPatterns.some(pattern => pattern.test(ip));
+}
+
+// Enhanced security headers
+export const getEnhancedSecurityHeaders = () => ({
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; font-src 'self' data:;"
+});
+
+// Advanced monitoring utilities
+export async function logEnhancedSecurityEvent(
+  eventType: string,
+  metadata: Record<string, any> = {},
+  severity: 'low' | 'medium' | 'high' | 'critical' = 'medium'
+) {
+  try {
+    const sessionInfo = getSessionInfo();
+    const enhancedMetadata = {
+      ...metadata,
+      severity,
+      timestamp: new Date().toISOString(),
+      userAgent: navigator.userAgent,
+      url: window.location.href,
+      sessionId: sessionInfo.id,
+      sessionDuration: Date.now() - sessionInfo.startTime,
+      screenResolution: `${screen.width}x${screen.height}`,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      language: navigator.language,
+      cookiesEnabled: navigator.cookieEnabled,
+      referrer: document.referrer || 'direct'
+    };
+
+    // Log to backend
+    await logSecurityEvent(eventType, enhancedMetadata, severity);
+
+    // For critical events, also attempt to notify immediately
+    if (severity === 'critical') {
+      console.warn(`CRITICAL SECURITY ALERT [${eventType}]:`, enhancedMetadata);
+      
+      // In production, could trigger immediate notifications
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('Security Alert', {
+          body: `Critical security event detected: ${eventType}`,
+          icon: '/favicon.ico'
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Enhanced security logging error:', error);
+    // Fallback to basic logging
+    await logSecurityEvent(eventType, metadata, severity);
+  }
 }
