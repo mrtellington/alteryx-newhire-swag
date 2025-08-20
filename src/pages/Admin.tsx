@@ -795,11 +795,37 @@ export default function Admin() {
           <div className="flex items-center gap-4">
             <Button onClick={createAuthUsers}>
               <RotateCcw className="w-4 h-4 mr-2" />
-              Create Auth Users
+              Create Auth Users (All)
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={async () => {
+                const usersWithoutAuth = users.filter(u => !u.orders || u.orders.length === 0);
+                console.log('Users without auth:', usersWithoutAuth.length);
+                for (const user of usersWithoutAuth.slice(0, 5)) {
+                  try {
+                    const { data, error } = await supabase.functions.invoke('auto-create-auth-user', {
+                      body: { 
+                        email: user.email,
+                        full_name: user.full_name,
+                        first_name: user.first_name,
+                        last_name: user.last_name
+                      }
+                    });
+                    console.log(`${user.email}:`, data || error);
+                  } catch (err) {
+                    console.error(`${user.email}:`, err);
+                  }
+                }
+                toast({ title: "Processing users...", description: "Check console for details" });
+                setTimeout(fetchUsers, 3000);
+              }}
+            >
+              Process Individual Users
             </Button>
           </div>
           <p className="text-sm text-muted-foreground mt-2">
-            Links existing auth accounts to users who don't have auth_user_id set
+            Creates auth accounts for users who can't login. Use "Create Auth Users (All)" for bulk processing.
           </p>
         </CardContent>
       </Card>

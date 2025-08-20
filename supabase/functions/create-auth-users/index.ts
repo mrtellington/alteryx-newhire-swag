@@ -74,15 +74,18 @@ serve(async (req) => {
       console.log(`[${results.length + 1}/${usersNeedingAuth.length}] Processing: ${user.email}`);
       
       try {
-        // Create auth user
+        // Create auth user with proper error handling
+        console.log(`Attempting to create auth user for ${user.email}...`);
         const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: user.email,
           email_confirm: true,
           user_metadata: {
             full_name: user.full_name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-            invited_via: 'admin_fix'
+            invited_via: 'admin_create'
           }
         });
+
+        console.log(`Auth creation result for ${user.email}:`, { authUser: !!authUser, authError });
 
         if (authError) {
           // If user already exists, try to find them
