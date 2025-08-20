@@ -242,6 +242,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_auth_users_to_clean: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          email: string
+          reason: string
+        }[]
+      }
       get_current_user_admin_status: {
         Args: Record<PropertyKey, never>
         Returns: boolean
