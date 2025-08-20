@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Shield, ShieldOff } from "lucide-react";
+import { Plus, Shield, ShieldOff, UserPlus } from "lucide-react";
 import { secureEmailSchema, logSecurityEvent, isValidAdminEmail } from "@/lib/security";
 
 interface AdminUser {
@@ -24,6 +24,7 @@ export default function AdminManagement() {
   const [loading, setLoading] = useState(true);
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [creatingAuthUsers, setCreatingAuthUsers] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -151,6 +152,44 @@ export default function AdminManagement() {
     }
   };
 
+  const createMissingAuthUsers = async () => {
+    setCreatingAuthUsers(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-auth-users', {
+        body: {}
+      });
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: "Success",
+        description: `Auth user creation completed. Processed ${data.processed} users.`,
+      });
+      
+      // Log the auth user creation event
+      await supabase.rpc('log_security_event', {
+        event_type: 'auth_users_created',
+        metadata: { 
+          processed: data.processed,
+          results: data.results,
+          initiated_by: (await supabase.auth.getUser()).data.user?.email
+        }
+      });
+      
+    } catch (error) {
+      console.error('Error creating auth users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create missing auth users",
+        variant: "destructive"
+      });
+    } finally {
+      setCreatingAuthUsers(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-32">
@@ -164,7 +203,16 @@ export default function AdminManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Admin User Management</CardTitle>
-          <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={createMissingAuthUsers}
+              disabled={creatingAuthUsers}
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              {creatingAuthUsers ? "Creating..." : "Create Auth Users"}
+            </Button>
+            <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="w-4 h-4 mr-2" />
@@ -195,6 +243,7 @@ export default function AdminManagement() {
               </div>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
