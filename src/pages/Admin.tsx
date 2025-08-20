@@ -59,6 +59,8 @@ export default function Admin() {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [editingShipping, setEditingShipping] = useState<{orderId: string, tracking: string, carrier: string} | null>(null);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, currentUser: '' });
   const { toast } = useToast();
 
   // Initialize session security monitoring
@@ -468,9 +470,65 @@ export default function Admin() {
     }
   };
 
+  // Helper function to create delay with progressive timing
+  const createDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Helper function to calculate progressive delay based on position and batch size
+  const getProgressiveDelay = (index: number, totalUsers: number) => {
+    // Base delay starts at 500ms
+    let baseDelay = 500;
+    
+    // Increase delay for larger batches
+    if (totalUsers > 50) baseDelay = 1000;
+    if (totalUsers > 100) baseDelay = 1500;
+    
+    // Add progressive delay every 10 users
+    const progressiveDelay = Math.floor(index / 10) * 200;
+    
+    return baseDelay + progressiveDelay;
+  };
+
+  // Enhanced retry logic for auth user creation
+  const createUserWithRetry = async (userData: any, retries = 3) => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const { data, error } = await supabase.functions.invoke("cognito-webhook", {
+          body: userData
+        });
+
+        if (error) {
+          // Check if it's a rate limiting error
+          const isRateLimit = error.message?.includes('rate') || 
+                             error.message?.includes('limit') || 
+                             error.message?.includes('429') ||
+                             error.status === 429;
+          
+          if (isRateLimit && attempt < retries) {
+            console.log(`Rate limit hit for ${userData.email}, retrying in ${attempt * 2000}ms (attempt ${attempt}/${retries})`);
+            await createDelay(attempt * 2000); // Progressive retry delay
+            continue;
+          }
+          
+          throw error;
+        }
+
+        return { data, error: null };
+      } catch (err) {
+        if (attempt === retries) {
+          throw err;
+        }
+        
+        console.log(`Attempt ${attempt} failed for ${userData.email}, retrying...`);
+        await createDelay(attempt * 1000);
+      }
+    }
+  };
+
   const handleCsvUpload = async () => {
     if (!csvFile) return;
 
+    setIsImporting(true);
+    
     try {
       const text = await csvFile.text();
       const lines = text.split('\n').filter(line => line.trim());
@@ -483,79 +541,110 @@ export default function Admin() {
           user[header] = values[index] || '';
         });
         return user;
-      });
+      }).filter(user => user.email || user.email_address || user.emailaddress); // Filter out empty rows
+
+      const totalUsers = users.length;
+      setImportProgress({ current: 0, total: totalUsers, currentUser: '' });
 
       let successCount = 0;
       let errorCount = 0;
+      const BATCH_SIZE = 10;
 
-      for (const user of users) {
-        // Handle different possible email column names
-        const email = user.email || user.email_address || user.emailaddress;
+      // Process users in batches
+      for (let batchStart = 0; batchStart < totalUsers; batchStart += BATCH_SIZE) {
+        const batch = users.slice(batchStart, Math.min(batchStart + BATCH_SIZE, totalUsers));
         
-        if (email) {
-          try {
-            // Handle different possible name column names with priority for exact matches
-            let firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
-            let lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
-            let fullName = user.full_name || user.fullname || user.name || user.display_name || '';
-            
-            // Clean up the name fields
-            firstName = firstName.trim();
-            lastName = lastName.trim();
-            fullName = fullName.trim();
-            
-            // If we have individual names but no full name, construct it
-            if ((firstName || lastName) && !fullName) {
-              fullName = `${firstName} ${lastName}`.trim();
-            }
-            
-            // If we have full name but missing individual names, split it
-            if (fullName && (!firstName || !lastName)) {
-              const nameParts = fullName.split(/\s+/);
-              if (nameParts.length >= 2) {
-                if (!firstName) firstName = nameParts[0];
-                if (!lastName) lastName = nameParts.slice(1).join(' ');
-              } else if (nameParts.length === 1 && !firstName) {
-                firstName = nameParts[0];
-              }
-            }
-            
-            const shippingAddress = {
-              address: user.address || user.street_address || user.address_line_1 || '',
-              city: user.city || '',
-              state: user.state || user.province || user.region || '',
-              zip: user.zip || user.zipcode || user.postal_code || user.postcode || '',
-              phone: user.phone || user.phone_number || user.telephone || ''
-            };
+        console.log(`Processing batch ${Math.floor(batchStart / BATCH_SIZE) + 1}/${Math.ceil(totalUsers / BATCH_SIZE)}`);
 
-            console.log(`Importing user: ${email}`, {
-              firstName,
-              lastName,
-              fullName,
-              shippingAddress
+        // Process each user in the batch with progressive delays
+        for (let i = 0; i < batch.length; i++) {
+          const user = batch[i];
+          const globalIndex = batchStart + i;
+          
+          // Handle different possible email column names
+          const email = user.email || user.email_address || user.emailaddress;
+          
+          if (email) {
+            setImportProgress({ 
+              current: globalIndex + 1, 
+              total: totalUsers, 
+              currentUser: email 
             });
 
-            const { data, error } = await supabase.functions.invoke("cognito-webhook", {
-              body: {
+            try {
+              // Handle different possible name column names with priority for exact matches
+              let firstName = user.first_name || user.firstname || user.fname || user.given_name || '';
+              let lastName = user.last_name || user.lastname || user.lname || user.family_name || user.surname || '';
+              let fullName = user.full_name || user.fullname || user.name || user.display_name || '';
+              
+              // Clean up the name fields
+              firstName = firstName.trim();
+              lastName = lastName.trim();
+              fullName = fullName.trim();
+              
+              // If we have individual names but no full name, construct it
+              if ((firstName || lastName) && !fullName) {
+                fullName = `${firstName} ${lastName}`.trim();
+              }
+              
+              // If we have full name but missing individual names, split it
+              if (fullName && (!firstName || !lastName)) {
+                const nameParts = fullName.split(/\s+/);
+                if (nameParts.length >= 2) {
+                  if (!firstName) firstName = nameParts[0];
+                  if (!lastName) lastName = nameParts.slice(1).join(' ');
+                } else if (nameParts.length === 1 && !firstName) {
+                  firstName = nameParts[0];
+                }
+              }
+              
+              const shippingAddress = {
+                address: user.address || user.street_address || user.address_line_1 || '',
+                city: user.city || '',
+                state: user.state || user.province || user.region || '',
+                zip: user.zip || user.zipcode || user.postal_code || user.postcode || '',
+                phone: user.phone || user.phone_number || user.telephone || ''
+              };
+
+              console.log(`Importing user ${globalIndex + 1}/${totalUsers}: ${email}`);
+
+              const userData = {
                 email: email,
                 full_name: fullName,
                 first_name: firstName,
                 last_name: lastName,
                 shipping_address: shippingAddress
-              }
-            });
+              };
 
-            if (error) {
-              console.error(`Error importing user ${email}:`, error);
+              // Use retry logic for user creation
+              const { data, error } = await createUserWithRetry(userData);
+
+              if (error) {
+                console.error(`Error importing user ${email}:`, error);
+                errorCount++;
+              } else {
+                console.log(`Successfully imported user ${email}`);
+                successCount++;
+              }
+
+              // Progressive delay between users (but not after the last user in batch)
+              if (i < batch.length - 1 || batchStart + BATCH_SIZE < totalUsers) {
+                const delay = getProgressiveDelay(globalIndex, totalUsers);
+                console.log(`Waiting ${delay}ms before next user...`);
+                await createDelay(delay);
+              }
+
+            } catch (userError) {
+              console.error(`Error processing user ${email}:`, userError);
               errorCount++;
-            } else {
-              console.log(`Successfully imported user ${email}:`, data);
-              successCount++;
             }
-          } catch (userError) {
-            console.error(`Error processing user ${email}:`, userError);
-            errorCount++;
           }
+        }
+
+        // Longer delay between batches (except for the last batch)
+        if (batchStart + BATCH_SIZE < totalUsers) {
+          console.log('Waiting 3 seconds between batches...');
+          await createDelay(3000);
         }
       }
 
@@ -565,11 +654,12 @@ export default function Admin() {
       });
 
       setCsvFile(null);
+      setImportProgress({ current: 0, total: 0, currentUser: '' });
       
       // Wait a moment for the database to update, then refresh
       setTimeout(() => {
         fetchUsers();
-      }, 1000);
+      }, 2000);
       
     } catch (error) {
       console.error("Error importing CSV:", error);
@@ -578,6 +668,8 @@ export default function Admin() {
         description: "Failed to import CSV",
         variant: "destructive"
       });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -742,14 +834,46 @@ export default function Admin() {
               type="file"
               accept=".csv"
               onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+              disabled={isImporting}
             />
-            <Button onClick={handleCsvUpload} disabled={!csvFile}>
+            <Button onClick={handleCsvUpload} disabled={!csvFile || isImporting}>
               <Upload className="w-4 h-4 mr-2" />
-              Import CSV
+              {isImporting ? 'Importing...' : 'Import CSV'}
             </Button>
           </div>
+          
+          {isImporting && (
+            <div className="mt-4 p-4 bg-muted rounded-lg">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Import Progress</span>
+                <span className="text-sm text-muted-foreground">
+                  {importProgress.current} / {importProgress.total}
+                </span>
+              </div>
+              <div className="w-full bg-background rounded-full h-2 mb-2">
+                <div 
+                  className="bg-primary h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${importProgress.total > 0 ? (importProgress.current / importProgress.total) * 100 : 0}%` 
+                  }}
+                ></div>
+              </div>
+              {importProgress.currentUser && (
+                <p className="text-xs text-muted-foreground">
+                  Currently processing: {importProgress.currentUser}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                Processing in batches with rate limiting protection...
+              </p>
+            </div>
+          )}
+          
           <p className="text-sm text-muted-foreground mt-2">
             Flexible column mapping supports various name formats (e.g., first_name/firstname/fname, last_name/lastname/surname, email/email_address)
+          </p>
+          <p className="text-sm text-muted-foreground">
+            ⚡ Enhanced with progressive delays and retry logic to prevent rate limiting issues
           </p>
         </CardContent>
       </Card>
