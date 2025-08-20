@@ -32,7 +32,7 @@ export const TestUserLogin = () => {
     <div className="p-4 border rounded-lg">
       <h3 className="text-lg font-semibold mb-2">Test User Login</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Test if imported users can request magic links successfully.
+        Test if all three users can request magic links successfully.
       </p>
       <div className="flex gap-2">
         <Button 
@@ -48,6 +48,13 @@ export const TestUserLogin = () => {
           size="sm"
         >
           Test Tejal
+        </Button>
+        <Button 
+          onClick={() => testLogin('shweta.rathaur@alteryx.com')} 
+          disabled={loading}
+          size="sm"
+        >
+          Test Shweta
         </Button>
       </div>
     </div>
