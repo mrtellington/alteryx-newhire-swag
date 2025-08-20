@@ -257,6 +257,14 @@ export type Database = {
           unique_users: number
         }[]
       }
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_system_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_user_admin: {
         Args: { user_email?: string }
         Returns: boolean
