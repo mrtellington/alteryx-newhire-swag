@@ -38,7 +38,7 @@ export default function Shop() {
     }
     canonical.setAttribute('href', `${window.location.origin}/shop`);
 
-    const checkAuthAndOrder = async () => {
+    const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         
@@ -56,25 +56,12 @@ export default function Shop() {
           setTimeout(() => navigate("/auth", { replace: true }), 100);
           return;
         }
-
-        // Check if user has already placed an order
-        const { data: userData, error } = await supabase
-          .from("users")
-          .select("order_submitted")
-          .eq("auth_user_id", session.user.id)
-          .single();
-
-        if (!mounted) return;
-
-        if (!error && userData?.order_submitted) {
-          setTimeout(() => navigate("/thank-you", { replace: true }), 100);
-        }
       } catch (error) {
-        console.error("Error checking auth and order status:", error);
+        console.error("Error checking auth:", error);
       }
     };
 
-    checkAuthAndOrder();
+    checkAuth();
 
     // Auth guard
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -89,23 +76,6 @@ export default function Shop() {
           supabase.auth.signOut();
           setTimeout(() => navigate("/auth", { replace: true }), 100);
           return;
-        }
-
-        // Check if user has already placed an order
-        try {
-          const { data: userData, error } = await supabase
-            .from("users")
-            .select("order_submitted")
-            .eq("auth_user_id", session.user.id)
-            .single();
-
-          if (!mounted) return;
-
-          if (!error && userData?.order_submitted) {
-            setTimeout(() => navigate("/thank-you", { replace: true }), 100);
-          }
-        } catch (error) {
-          console.error("Error checking order status:", error);
         }
       }
     });
