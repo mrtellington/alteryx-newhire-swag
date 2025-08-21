@@ -19,10 +19,10 @@ export const SecurityHeaders = () => {
     ].join('; ');
     document.head.appendChild(meta);
 
-    // Set X-Frame-Options
+    // Set X-Frame-Options (allow same origin for Lovable editor compatibility)
     const frameOptions = document.createElement('meta');
     frameOptions.httpEquiv = 'X-Frame-Options';
-    frameOptions.content = 'DENY';
+    frameOptions.content = 'SAMEORIGIN';
     document.head.appendChild(frameOptions);
 
     // Set X-Content-Type-Options
