@@ -486,7 +486,33 @@ export default function Admin() {
 
       // Skip header row
       const dataLines = lines.slice(1);
-      setImportProgress({ current: 0, total: dataLines.length, currentUser: '' });
+      
+      // Step 1: Clean up orphaned auth accounts first
+      console.log('🧹 Step 1: Cleaning up orphaned auth accounts...');
+      setImportProgress({ current: 0, total: dataLines.length + 2, currentUser: 'Cleaning up orphaned auth accounts...' });
+      
+      try {
+        const { data: cleanupData, error: cleanupError } = await supabase.functions.invoke('cleanup-auth-users', {
+          body: {}
+        });
+        
+        if (cleanupError) {
+          console.warn('⚠️ Cleanup function had issues:', cleanupError);
+        } else {
+          console.log('✅ Cleanup completed:', cleanupData);
+          const deletedCount = cleanupData?.totalDeleted || 0;
+          if (deletedCount > 0) {
+            toast({
+              title: "Cleanup Complete",
+              description: `Removed ${deletedCount} orphaned auth accounts`,
+            });
+          }
+        }
+      } catch (cleanupErr) {
+        console.warn('⚠️ Auth cleanup failed, continuing with import:', cleanupErr);
+      }
+
+      setImportProgress({ current: 1, total: dataLines.length + 2, currentUser: 'Starting user import...' });
 
       let successCount = 0;
       let errorCount = 0;
@@ -594,11 +620,46 @@ export default function Admin() {
         }
       }
 
-      // Show results with better messaging
+      // Step 2: Create auth accounts for all users
+      console.log('🔐 Step 2: Creating auth accounts for all users...');
+      setImportProgress({ current: dataLines.length + 1, total: dataLines.length + 2, currentUser: 'Creating auth accounts...' });
+      
+      try {
+        const { data: authData, error: authError } = await supabase.functions.invoke('create-auth-users', {
+          body: {}
+        });
+        
+        if (authError) {
+          console.warn('⚠️ Auth creation had issues:', authError);
+          toast({
+            title: "Auth Creation Issues",
+            description: "Some users may not have auth accounts. Check console for details.",
+            variant: "destructive"
+          });
+        } else {
+          console.log('✅ Auth creation completed:', authData);
+          const authSuccessCount = authData?.results?.filter((r: any) => r.success)?.length || 0;
+          const authErrorCount = authData?.results?.filter((r: any) => !r.success)?.length || 0;
+          
+          toast({
+            title: "Auth Accounts Created",
+            description: `Created ${authSuccessCount} auth accounts${authErrorCount > 0 ? `, ${authErrorCount} had issues` : ''}`,
+          });
+        }
+      } catch (authErr) {
+        console.warn('⚠️ Auth creation failed:', authErr);
+        toast({
+          title: "Auth Creation Failed",
+          description: "Users imported but auth accounts may not be created. Check console.",
+          variant: "destructive"
+        });
+      }
+
+      // Show final results with better messaging
       if (successCount > 0) {
         toast({
-          title: "Success",
-          description: `✅ Successfully imported ${successCount} users with auth accounts created`
+          title: "Import Complete",
+          description: `✅ Successfully imported ${successCount} users with auth account setup`
         });
       }
       
@@ -615,6 +676,26 @@ export default function Admin() {
       console.log(`📊 Import Summary: ${successCount} successful, ${errorCount} errors out of ${dataLines.length} total`);
 
       fetchUsers(); // Refresh the user list
+      
+      // Step 3: Verify all users have auth accounts
+      setTimeout(async () => {
+        const { data: usersWithoutAuth } = await supabase
+          .from('users')
+          .select('email')
+          .is('auth_user_id', null)
+          .eq('invited', true);
+          
+        if (usersWithoutAuth && usersWithoutAuth.length > 0) {
+          console.warn(`⚠️ ${usersWithoutAuth.length} users still missing auth accounts:`, usersWithoutAuth.map(u => u.email));
+          toast({
+            title: "Auth Verification",
+            description: `${usersWithoutAuth.length} users still need auth accounts`,
+            variant: "destructive"
+          });
+        } else {
+          console.log('✅ All users have auth accounts!');
+        }
+      }, 2000);
       
     } catch (error) {
       console.error('CSV upload error:', error);
