@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Email Sender</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+        button { background: #2563eb; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #1d4ed8; }
+        .result { margin-top: 20px; padding: 10px; border-radius: 5px; }
+        .success { background: #dcfce7; color: #166534; }
+        .error { background: #fef2f2; color: #dc2626; }
+    </style>
+</head>
+<body>
+    <h1>Test Email Sender</h1>
+    <p>Click the button below to send a test email to tod.ellington@whitestonebranding.com</p>
+    
+    <button onclick="sendTestEmail()">Send Test Email</button>
+    
+    <div id="result"></div>
+
+    <script>
+        async function sendTestEmail() {
+            const button = document.querySelector('button');
+            const resultDiv = document.getElementById('result');
+            
+            button.disabled = true;
+            button.textContent = 'Sending...';
+            resultDiv.innerHTML = '';
+            
+            try {
+                const response = await fetch('https://emnemfewmpjczkgwzrjv.supabase.co/functions/v1/send-test-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbmVtZmV3bXBqY3prZ3d6cmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTMwOTIsImV4cCI6MjA3MDYyOTA5Mn0.n5x7VHDee9vCJuQnrPfpdRl7iE0y0lfe1pRO3BxHwkA`
+                    },
+                    body: JSON.stringify({
+                        testEmail: 'tod.ellington@whitestonebranding.com'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div class="result success">✅ ${data.message}<br/>Message ID: ${data.messageId}</div>`;
+                } else {
+                    resultDiv.innerHTML = `<div class="result error">❌ Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">❌ Network error: ${error.message}</div>`;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Send Test Email';
+            }
+        }
+    </script>
+</body>
+</html>
