@@ -103,6 +103,33 @@ export type Database = {
           },
         ]
       }
+      read_only_admins: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          password_hash: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          password_hash: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          password_hash?: string
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
           additional_context: Json | null
@@ -192,9 +219,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      safe_admin_view: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          created_by: string | null
+          email: string | null
+          id: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          email?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      authenticate_readonly_admin: {
+        Args: { admin_email: string; admin_password: string }
+        Returns: Json
+      }
       check_suspicious_activity: {
         Args: {
           event_type_param: string
@@ -214,6 +268,14 @@ export type Database = {
           deleted_email: string
           deleted_id: string
         }[]
+      }
+      create_readonly_admin: {
+        Args: {
+          admin_email: string
+          admin_password: string
+          created_by_email?: string
+        }
+        Returns: Json
       }
       create_user_from_webhook: {
         Args:
@@ -266,6 +328,10 @@ export type Database = {
       }
       is_current_user_admin: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_readonly_admin: {
+        Args: { admin_email: string }
         Returns: boolean
       }
       is_system_admin: {
