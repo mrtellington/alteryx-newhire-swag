@@ -100,40 +100,17 @@ export const useEnhancedSecurity = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Enhanced geolocation tracking for login events
+  // Track login events without geolocation
   const trackLoginLocation = async (eventType: string) => {
     try {
-      // Get approximate location from browser (if available)
-      if ('geolocation' in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          async (position) => {
-            const { latitude, longitude } = position.coords;
-            
-            await logSecurityEvent(
-              eventType,
-              {
-                location: {
-                  latitude: latitude.toFixed(2), // Reduced precision for privacy
-                  longitude: longitude.toFixed(2),
-                  accuracy: position.coords.accuracy
-                },
-                timestamp: new Date().toISOString()
-              }
-            );
-          },
-          (error) => {
-            // Silently handle geolocation errors
-            console.debug('Geolocation not available:', error.message);
-          },
-          {
-            timeout: 5000,
-            maximumAge: 300000, // 5 minutes
-            enableHighAccuracy: false
-          }
-        );
-      }
+      await logSecurityEvent(
+        eventType,
+        {
+          timestamp: new Date().toISOString()
+        }
+      );
     } catch (error) {
-      console.debug('Location tracking error:', error);
+      console.debug('Event tracking error:', error);
     }
   };
 
