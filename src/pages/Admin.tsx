@@ -15,7 +15,7 @@ import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
 import { useSessionSecurity } from "@/hooks/useSessionSecurity";
-import { SecurityDashboard } from "@/components/SecurityDashboard";
+
 
 
 interface User {
@@ -62,8 +62,6 @@ export default function Admin() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, currentUser: '' });
-  const [isCreatingAuth, setIsCreatingAuth] = useState(false);
-  const [authProgress, setAuthProgress] = useState({ current: 0, total: 0, currentUser: '' });
   const { toast } = useToast();
 
   // Initialize session security monitoring
@@ -631,83 +629,6 @@ export default function Admin() {
     }
   };
 
-  const createAllAuthUsers = async () => {
-    setIsCreatingAuth(true);
-    setAuthProgress({ current: 0, total: 0, currentUser: '' });
-    
-    try {
-      console.log('🚀 Creating auth users for all users without auth accounts...');
-      
-      const { data, error } = await supabase.functions.invoke('create-missing-auth-users', {
-        body: {} // Process all users without auth_user_id
-      });
-
-      if (error) {
-        console.error('❌ Error creating auth users:', error);
-        toast({
-          title: "Error",
-          description: "Failed to create auth users",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('✅ Auth user creation completed!');
-      console.log(`📊 Processed: ${data.processed} users`);
-      
-      let successCount = 0;
-      let errorCount = 0;
-      
-      data.results.forEach((userResult: any, index: number) => {
-        setAuthProgress({ 
-          current: index + 1, 
-          total: data.results.length, 
-          currentUser: userResult.email 
-        });
-        
-        if (userResult.success) {
-          successCount++;
-          console.log(`${index + 1}. ✅ ${userResult.email}: ${userResult.action} (Auth ID: ${userResult.auth_user_id})`);
-        } else {
-          errorCount++;
-          console.log(`${index + 1}. ❌ ${userResult.email}: ${userResult.error}`);
-        }
-      });
-
-      console.log(`\n📈 Summary: ${successCount} successful, ${errorCount} errors`);
-      
-      if (successCount > 0) {
-        toast({
-          title: "Success",
-          description: `✅ Successfully created/linked auth accounts for ${successCount} users`
-        });
-      }
-      
-      if (errorCount > 0) {
-        toast({
-          title: "Warning",
-          description: `❌ Failed to create auth accounts for ${errorCount} users`,
-          variant: "destructive"
-        });
-      }
-      
-      console.log('🎉 All users should now have auth accounts and be able to login and order!');
-      
-      // Refresh user list
-      fetchUsers();
-      
-    } catch (err) {
-      console.error('❌ Exception creating auth users:', err);
-      toast({
-        title: "Error",
-        description: "Critical error during auth user creation",
-        variant: "destructive"
-      });
-    } finally {
-      setIsCreatingAuth(false);
-      setAuthProgress({ current: 0, total: 0, currentUser: '' });
-    }
-  };
 
   const exportUsers = () => {
     const csvContent = [
@@ -914,60 +835,6 @@ export default function Admin() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Fix Missing Auth Accounts</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Some users may be missing authentication accounts due to previous rate limiting issues. 
-              Use this tool to create auth accounts for all users who need them.
-            </p>
-            
-            <Button 
-              onClick={createAllAuthUsers} 
-              disabled={isCreatingAuth}
-              className="w-full"
-            >
-              {isCreatingAuth ? (
-                <>
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                  Creating Auth Accounts...
-                </>
-              ) : (
-                'Create Missing Auth Accounts'
-              )}
-            </Button>
-            
-            {isCreatingAuth && (
-              <div className="p-4 bg-muted rounded-lg">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">Progress</span>
-                  <span className="text-sm text-muted-foreground">
-                    {authProgress.current} / {authProgress.total}
-                  </span>
-                </div>
-                <div className="w-full bg-background rounded-full h-2 mb-2">
-                  <div 
-                    className="bg-primary h-2 rounded-full transition-all duration-300"
-                    style={{ 
-                      width: `${authProgress.total > 0 ? (authProgress.current / authProgress.total) * 100 : 0}%` 
-                    }}
-                  ></div>
-                </div>
-                {authProgress.currentUser && (
-                  <p className="text-xs text-muted-foreground">
-                    Processing: {authProgress.currentUser}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <SecurityDashboard />
 
       <Card>
         <CardHeader>
