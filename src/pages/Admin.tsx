@@ -493,7 +493,7 @@ export default function Admin() {
       const errors: string[] = [];
 
       // Process users in smaller batches with progressive delays to prevent rate limiting
-      const batchSize = 5; // Reduced from 10 to 5 for better rate limiting
+      const batchSize = 3; // Reduced from 5 to 3 for better rate limiting
       const batches = [];
       for (let i = 0; i < dataLines.length; i += batchSize) {
         batches.push(dataLines.slice(i, i + batchSize));
@@ -532,7 +532,7 @@ export default function Admin() {
             } : null;
 
             // Increased progressive delay to prevent rate limiting
-            const delay = Math.min(1000 + (batchIndex * 500) + (userIndex * 300), 3000);
+            const delay = Math.min(2000 + (batchIndex * 750) + (userIndex * 500), 5000);
             if (currentIndex > 0) {
               console.log(`Waiting ${delay}ms before processing ${email}...`);
               await new Promise(resolve => setTimeout(resolve, delay));
@@ -556,10 +556,10 @@ export default function Admin() {
                 });
 
                 if (error) {
-                  if (error.message?.includes('rate limit') || error.message?.includes('too many requests')) {
+                  if (error.message?.includes('rate limit') || error.message?.includes('too many requests') || error.message?.includes('already been registered')) {
                     if (retryCount < maxRetries - 1) {
                       retryCount++;
-                      const retryDelay = 2000 * Math.pow(2, retryCount); // Exponential backoff
+                      const retryDelay = 3000 * Math.pow(2, retryCount); // Exponential backoff
                       console.log(`Rate limited for ${email}, retrying in ${retryDelay}ms... (attempt ${retryCount}/${maxRetries})`);
                       await new Promise(resolve => setTimeout(resolve, retryDelay));
                       continue;
@@ -588,7 +588,7 @@ export default function Admin() {
 
         // Longer delay between batches to ensure rate limiting compliance
         if (batchIndex < batches.length - 1) {
-          const batchDelay = 3000 + (batchIndex * 500); // Increased from 1500ms
+          const batchDelay = 5000 + (batchIndex * 1000); // Increased from 3000ms
           console.log(`Batch ${batchIndex + 1} complete. Waiting ${batchDelay}ms before next batch...`);
           await new Promise(resolve => setTimeout(resolve, batchDelay));
         }
