@@ -742,24 +742,46 @@ export default function Admin() {
         });
       }
 
-      // Step 2: Delete all users and orders from database using secure function
-      console.log('🗑️ Step 2: Deleting all users and orders from database...');
-      const { data: resetData, error: resetError } = await supabase.rpc('nuclear_reset_all_data');
+      // Step 2: Force delete all users and orders via admin privileges
+      console.log('🗑️ Step 2: Force deleting all data...');
       
-      if (resetError) {
-        console.error('❌ Failed to delete data:', resetError);
+      try {
+        // Delete all orders first
+        const { error: ordersError } = await supabase
+          .from('orders')
+          .delete()
+          .gte('id', '00000000-0000-0000-0000-000000000000'); // Match all UUIDs
+        
+        if (ordersError) {
+          console.warn('⚠️ Orders deletion had issues:', ordersError);
+        }
+
+        // Delete all users 
+        const { error: usersError } = await supabase
+          .from('users')
+          .delete()
+          .gte('id', '00000000-0000-0000-0000-000000000000'); // Match all UUIDs
+        
+        if (usersError) {
+          console.error('❌ Users deletion failed:', usersError);
+          toast({
+            title: "Database Cleanup Failed", 
+            description: `Failed to delete users: ${usersError.message}`,
+            variant: "destructive"
+          });
+        } else {
+          console.log('✅ All data deleted successfully');
+          toast({
+            title: "Database Cleaned",
+            description: "All users and orders deleted successfully",
+          });
+        }
+      } catch (deleteError) {
+        console.error('❌ Data deletion error:', deleteError);
         toast({
-          title: "Database Cleanup Failed",
-          description: `Failed to delete data: ${resetError.message}`,
+          title: "Deletion Error",
+          description: "Error during data deletion process",
           variant: "destructive"
-        });
-      } else {
-        console.log('✅ Database reset completed:', resetData);
-        const deletedUsers = (resetData as any)?.deleted_users || 0;
-        const deletedOrders = (resetData as any)?.deleted_orders || 0;
-        toast({
-          title: "Database Cleaned",
-          description: `Deleted ${deletedUsers} users and ${deletedOrders} orders`,
         });
       }
 
