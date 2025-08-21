@@ -54,6 +54,7 @@ export default function Shop() {
         if (!mounted) return;
         
         if (!session) {
+          console.log("Shop: No session, redirecting to auth");
           setTimeout(() => navigate("/auth", { replace: true }), 100);
           return;
         }
@@ -65,8 +66,42 @@ export default function Shop() {
           setTimeout(() => navigate("/auth", { replace: true }), 100);
           return;
         }
+
+        // Check if user exists in database with their auth_user_id
+        console.log("Shop: Checking user exists in database with auth_user_id:", session.user.id);
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("id, auth_user_id, invited, order_submitted")
+          .eq("auth_user_id", session.user.id)
+          .maybeSingle();
+
+        if (!mounted) return;
+
+        if (userError) {
+          console.error("Shop: Database user lookup error:", userError);
+          supabase.auth.signOut();
+          setTimeout(() => navigate("/auth", { replace: true }), 100);
+          return;
+        }
+
+        if (!userData) {
+          console.log("Shop: User not found in database, redirecting to auth");
+          supabase.auth.signOut();
+          setTimeout(() => navigate("/auth", { replace: true }), 100);
+          return;
+        }
+
+        if (!userData.invited) {
+          console.log("Shop: User not invited, redirecting to auth");
+          supabase.auth.signOut();
+          setTimeout(() => navigate("/auth", { replace: true }), 100);
+          return;
+        }
+
+        console.log("Shop: User authenticated and found in database");
       } catch (error) {
         console.error("Error checking auth:", error);
+        setTimeout(() => navigate("/auth", { replace: true }), 100);
       }
     };
 
@@ -77,6 +112,7 @@ export default function Shop() {
       if (!mounted) return;
       
       if (!session) {
+        console.log("Shop: Auth state change - no session, redirecting to auth");
         setTimeout(() => navigate("/auth", { replace: true }), 100);
       } else {
         const email = session.user.email ?? '';
@@ -86,6 +122,25 @@ export default function Shop() {
           setTimeout(() => navigate("/auth", { replace: true }), 100);
           return;
         }
+
+        // Check if user exists in database with their auth_user_id
+        console.log("Shop: Auth state change - checking user exists in database with auth_user_id:", session.user.id);
+        const { data: userData, error: userError } = await supabase
+          .from("users")
+          .select("id, auth_user_id, invited, order_submitted")
+          .eq("auth_user_id", session.user.id)
+          .maybeSingle();
+
+        if (!mounted) return;
+
+        if (userError || !userData || !userData.invited) {
+          console.log("Shop: Auth state change - user not found or not invited, redirecting to auth");
+          supabase.auth.signOut();
+          setTimeout(() => navigate("/auth", { replace: true }), 100);
+          return;
+        }
+
+        console.log("Shop: Auth state change - user authenticated and found in database");
       }
     });
 
