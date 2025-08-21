@@ -940,16 +940,6 @@ export default function Admin() {
               <Upload className="w-4 h-4 mr-2" />
               {isImporting ? 'Importing...' : 'Import CSV'}
             </Button>
-            
-            {/* Nuclear Reset Button */}
-            <Button 
-              onClick={handleNuclearReset}
-              disabled={isDeleting || isImporting}
-              variant="destructive"
-              className="bg-red-600 hover:bg-red-700"
-            >
-              {isDeleting ? 'Deleting All...' : '🗑️ DELETE ALL'}
-            </Button>
           </div>
           
           {isImporting && (
