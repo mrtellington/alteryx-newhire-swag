@@ -130,6 +130,42 @@ export type Database = {
         }
         Relationships: []
       }
+      secure_readonly_admins: {
+        Row: {
+          active: boolean
+          allowed_ip_ranges: Json | null
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          last_login: string | null
+          login_attempts: number | null
+          security_clearance_level: string | null
+        }
+        Insert: {
+          active?: boolean
+          allowed_ip_ranges?: Json | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          last_login?: string | null
+          login_attempts?: number | null
+          security_clearance_level?: string | null
+        }
+        Update: {
+          active?: boolean
+          allowed_ip_ranges?: Json | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          last_login?: string | null
+          login_attempts?: number | null
+          security_clearance_level?: string | null
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
           additional_context: Json | null
@@ -226,6 +262,10 @@ export type Database = {
         Args: { admin_email: string; admin_password: string }
         Returns: Json
       }
+      authenticate_secure_readonly_admin: {
+        Args: { admin_email: string }
+        Returns: Json
+      }
       check_suspicious_activity: {
         Args: {
           event_type_param: string
@@ -309,6 +349,10 @@ export type Database = {
       }
       is_readonly_admin: {
         Args: { admin_email: string }
+        Returns: boolean
+      }
+      is_secure_readonly_admin: {
+        Args: { admin_email?: string }
         Returns: boolean
       }
       is_system_admin: {
