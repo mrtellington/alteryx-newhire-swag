@@ -55,14 +55,20 @@ const AdminLogin = () => {
         // Small delay to ensure session is fully established
         setTimeout(async () => {
           try {
+            // Use the new secure readonly admin check
+            const { data: isSecureAdmin, error: secureAdminError } = await supabase.rpc('is_secure_readonly_admin', {
+              admin_email: session.user.email
+            });
+            
+            // Fallback to regular admin check for system admins
             const { data: isAdmin, error } = await supabase.rpc('is_user_admin', {
               user_email: session.user.email
             });
             
-            console.log('Admin check result:', { isAdmin, error, email: session.user.email });
+            console.log('Admin check result:', { isSecureAdmin, isAdmin, secureAdminError, error, email: session.user.email });
             
-            if (error) {
-              console.error('RPC error:', error);
+            if (secureAdminError && error) {
+              console.error('RPC errors:', { secureAdminError, error });
               toast({
                 title: "Error",
                 description: `Admin check failed: ${error.message}`,
@@ -71,7 +77,8 @@ const AdminLogin = () => {
               return;
             }
             
-            if (isAdmin) {
+            // User is admin if they're either a secure readonly admin OR a system admin
+            if (isSecureAdmin || isAdmin) {
               navigate('/admin');
             } else {
               // Not an admin, sign out and show error
@@ -241,7 +248,7 @@ const AdminLogin = () => {
             <div>
               <CardTitle className="text-2xl font-bold">Admin Access</CardTitle>
               <CardDescription className="text-base">
-                Enter your admin email to receive a secure magic link
+                Secure authentication using Supabase magic links - no passwords required
               </CardDescription>
             </div>
           </CardHeader>

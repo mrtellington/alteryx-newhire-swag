@@ -103,33 +103,6 @@ export type Database = {
           },
         ]
       }
-      read_only_admins: {
-        Row: {
-          active: boolean
-          created_at: string
-          created_by: string | null
-          email: string
-          id: string
-          password_hash: string
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
-          email: string
-          id?: string
-          password_hash: string
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
-          email?: string
-          id?: string
-          password_hash?: string
-        }
-        Relationships: []
-      }
       secure_readonly_admins: {
         Row: {
           active: boolean
@@ -258,10 +231,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      authenticate_readonly_admin: {
-        Args: { admin_email: string; admin_password: string }
-        Returns: Json
-      }
       authenticate_secure_readonly_admin: {
         Args: { admin_email: string }
         Returns: Json
@@ -286,12 +255,8 @@ export type Database = {
           deleted_id: string
         }[]
       }
-      create_readonly_admin: {
-        Args: {
-          admin_email: string
-          admin_password: string
-          created_by_email?: string
-        }
+      create_secure_readonly_admin: {
+        Args: { admin_email: string; created_by_email?: string }
         Returns: Json
       }
       create_user_from_webhook: {
@@ -345,10 +310,6 @@ export type Database = {
       }
       is_current_user_admin: {
         Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_readonly_admin: {
-        Args: { admin_email: string }
         Returns: boolean
       }
       is_secure_readonly_admin: {
