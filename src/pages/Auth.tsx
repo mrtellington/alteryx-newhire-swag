@@ -15,6 +15,7 @@ import {
   isAllowedEmailDomain,
   initializeSecureSession 
 } from "@/lib/security";
+import { useEnhancedSecurity } from "@/hooks/useEnhancedSecurity";
 
 // Initialize rate limiter for magic link requests
 const rateLimiter = new RateLimiter(3, 10 * 60 * 1000); // 3 attempts per 10 minutes
@@ -23,6 +24,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const { trackLoginLocation } = useEnhancedSecurity();
   const [orderDetails, setOrderDetails] = useState<{
     orderNumber: string;
     dateSubmitted: string;
@@ -245,6 +247,10 @@ const Auth = () => {
       await logSecurityEvent('auth_magic_link_sent', { 
         email: email.substring(0, 20) + '...' 
       });
+      
+      // Track login location for enhanced security monitoring
+      await trackLoginLocation('auth_magic_link_sent');
+      
       toast({ title: "Check your email", description: "We sent you a secure magic link." });
     }
   };

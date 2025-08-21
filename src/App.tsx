@@ -12,29 +12,34 @@ import AdminLogin from "./pages/AdminLogin";
 import ThankYou from "./pages/ThankYou";
 import SiteHeader from "./components/SiteHeader";
 import { SecurityErrorBoundary } from "./components/security/SecurityErrorBoundary";
+import { SecurityHeaders } from "./components/security/SecurityHeaders";
+import { CSRFProvider } from "./components/security/CSRFProtection";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <SecurityErrorBoundary>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <SiteHeader />
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/shop" element={<Shop />} />
-            <Route path="/thank-you" element={<ThankYou />} />
-            <Route path="/admin/login" element={<AdminLogin />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route path="/" element={<Index />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </SecurityErrorBoundary>
+      <CSRFProvider>
+        <SecurityErrorBoundary>
+          <SecurityHeaders />
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <SiteHeader />
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/shop" element={<Shop />} />
+              <Route path="/thank-you" element={<ThankYou />} />
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<Admin />} />
+              <Route path="/" element={<Index />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </SecurityErrorBoundary>
+      </CSRFProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
