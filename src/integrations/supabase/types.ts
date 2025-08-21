@@ -219,30 +219,7 @@ export type Database = {
       }
     }
     Views: {
-      safe_admin_view: {
-        Row: {
-          active: boolean | null
-          created_at: string | null
-          created_by: string | null
-          email: string | null
-          id: string | null
-        }
-        Insert: {
-          active?: boolean | null
-          created_at?: string | null
-          created_by?: string | null
-          email?: string | null
-          id?: string | null
-        }
-        Update: {
-          active?: boolean | null
-          created_at?: string | null
-          created_by?: string | null
-          email?: string | null
-          id?: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       authenticate_readonly_admin: {
@@ -345,6 +322,13 @@ export type Database = {
       link_existing_auth_users: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      list_all_views: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          view_definition: string
+          view_name: string
+        }[]
       }
       log_detailed_security_event: {
         Args: {
