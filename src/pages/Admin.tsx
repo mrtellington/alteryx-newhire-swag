@@ -725,89 +725,39 @@ export default function Admin() {
     try {
       console.log('🗑️ Starting nuclear reset - deleting all users and auth accounts...');
       
-      // Step 1: Delete all auth users first
-      console.log('🧹 Step 1: Deleting all auth accounts...');
-      const { data: cleanupData, error: cleanupError } = await supabase.functions.invoke('cleanup-auth-users', {
+      // Step 1: Call the nuclear reset edge function
+      console.log('🚨 Calling nuclear reset function...');
+      const { data: resetResult, error: resetError } = await supabase.functions.invoke('nuclear-reset', {
         body: {}
       });
       
-      if (cleanupError) {
-        console.error('❌ Auth cleanup failed:', cleanupError);
-      } else {
-        console.log('✅ Auth cleanup completed:', cleanupData);
-        const deletedAuthCount = cleanupData?.totalDeleted || 0;
+      if (resetError) {
+        console.error('❌ Nuclear reset failed:', resetError);
         toast({
-          title: "Auth Cleanup Complete",
-          description: `Deleted ${deletedAuthCount} auth accounts`,
-        });
-      }
-
-      // Step 2: Force delete all users and orders via admin privileges
-      console.log('🗑️ Step 2: Force deleting all data...');
-      
-      try {
-        // Delete all orders first
-        const { error: ordersError } = await supabase
-          .from('orders')
-          .delete()
-          .gte('id', '00000000-0000-0000-0000-000000000000'); // Match all UUIDs
-        
-        if (ordersError) {
-          console.warn('⚠️ Orders deletion had issues:', ordersError);
-        }
-
-        // Delete all users 
-        const { error: usersError } = await supabase
-          .from('users')
-          .delete()
-          .gte('id', '00000000-0000-0000-0000-000000000000'); // Match all UUIDs
-        
-        if (usersError) {
-          console.error('❌ Users deletion failed:', usersError);
-          toast({
-            title: "Database Cleanup Failed", 
-            description: `Failed to delete users: ${usersError.message}`,
-            variant: "destructive"
-          });
-        } else {
-          console.log('✅ All data deleted successfully');
-          toast({
-            title: "Database Cleaned",
-            description: "All users and orders deleted successfully",
-          });
-        }
-      } catch (deleteError) {
-        console.error('❌ Data deletion error:', deleteError);
-        toast({
-          title: "Deletion Error",
-          description: "Error during data deletion process",
+          title: "Nuclear Reset Failed",
+          description: `Error: ${resetError.message}`,
           variant: "destructive"
         });
-      }
-
-      // Step 3: Verify everything is clean
-      setTimeout(async () => {
-        const { data: remainingUsers, count } = await supabase
-          .from('users')
-          .select('*', { count: 'exact' });
-          
-        if (count === 0) {
-          console.log('✅ Nuclear reset complete - all data cleared!');
+      } else {
+        console.log('✅ Nuclear reset completed:', resetResult);
+        const authDeleted = resetResult?.deleted_auth_users || 0;
+        const remaining = resetResult?.remaining_users || 0;
+        
+        if (remaining === 0) {
           toast({
-            title: "🗑️ Nuclear Reset Complete",
-            description: "All users and auth accounts permanently deleted",
+            title: "🚨 Nuclear Reset Complete",
+            description: `Deleted ${authDeleted} auth users. Database is now empty.`,
           });
         } else {
-          console.warn(`⚠️ ${count} users still remain in database`);
           toast({
-            title: "Cleanup Incomplete",
-            description: `${count} users still remain`,
+            title: "Reset Incomplete",
+            description: `${remaining} users still remain in database`,
             variant: "destructive"
           });
         }
-      }, 1000);
+      }
 
-      // Refresh the admin dashboard
+      // Refresh the admin dashboard immediately
       fetchUsers();
       
     } catch (error) {
