@@ -295,6 +295,10 @@ export type Database = {
         Args: { event_type: string; metadata?: Json; user_id?: string }
         Returns: undefined
       }
+      nuclear_reset_all_data: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       place_order: {
         Args: Record<PropertyKey, never> | { tee_size_param?: string }
         Returns: string

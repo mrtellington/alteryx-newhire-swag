@@ -742,25 +742,24 @@ export default function Admin() {
         });
       }
 
-      // Step 2: Delete all users from public.users table
-      console.log('🗑️ Step 2: Deleting all users from database...');
-      const { error: deleteUsersError } = await supabase
-        .from('users')
-        .delete()
-        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all users
+      // Step 2: Delete all users and orders from database using secure function
+      console.log('🗑️ Step 2: Deleting all users and orders from database...');
+      const { data: resetData, error: resetError } = await supabase.rpc('nuclear_reset_all_data');
       
-      if (deleteUsersError) {
-        console.error('❌ Failed to delete users:', deleteUsersError);
+      if (resetError) {
+        console.error('❌ Failed to delete data:', resetError);
         toast({
           title: "Database Cleanup Failed",
-          description: "Failed to delete users from database",
+          description: `Failed to delete data: ${resetError.message}`,
           variant: "destructive"
         });
       } else {
-        console.log('✅ All users deleted from database');
+        console.log('✅ Database reset completed:', resetData);
+        const deletedUsers = (resetData as any)?.deleted_users || 0;
+        const deletedOrders = (resetData as any)?.deleted_orders || 0;
         toast({
           title: "Database Cleaned",
-          description: "All users deleted from database",
+          description: `Deleted ${deletedUsers} users and ${deletedOrders} orders`,
         });
       }
 
