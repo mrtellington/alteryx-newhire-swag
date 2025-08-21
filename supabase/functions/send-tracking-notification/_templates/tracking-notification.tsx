@@ -51,71 +51,51 @@ export const TrackingNotificationEmail = ({
   return (
     <Html>
       <Head />
-      <Preview>Your Alteryx New Hire Bundle has shipped!</Preview>
+      <Preview>🚚 Your Alteryx Kit Is On the Move!</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>Your Order Has Shipped! 📦</Heading>
-          <Text style={text}>Hi {firstName},</Text>
+          <Text style={text}>Hi {firstName}!</Text>
           <Text style={text}>
-            Great news! Your Alteryx New Hire Bundle is on its way to you.
+            Your Alteryx new hire kit has officially shipped and is making its way to you! 🎉
           </Text>
           
-          <Section style={trackingSection}>
-            <Heading style={h2}>Tracking Information</Heading>
-            <Text style={text}>
-              <strong>Order Number:</strong> {orderId}
-            </Text>
-            {shippingCarrier && (
-              <Text style={text}>
-                <strong>Carrier:</strong> {shippingCarrier}
-              </Text>
+          <Text style={text}>
+            📦 <strong>Tracking Info:</strong>{' '}
+            {trackingLink ? (
+              <Link href={trackingLink} target="_blank" style={trackingLinkStyle}>
+                {trackingNumber}
+              </Link>
+            ) : (
+              <span style={trackingCode}>{trackingNumber}</span>
             )}
-            <Text style={text}>
-              <strong>Tracking Number:</strong>{' '}
-              {trackingLink ? (
-                <Link href={trackingLink} target="_blank" style={trackingLink}>
-                  {trackingNumber}
-                </Link>
-              ) : (
-                <span style={trackingCode}>{trackingNumber}</span>
-              )}
-            </Text>
-          </Section>
-          
-          <Text style={text}>
-            {trackingLink 
-              ? "Click the tracking number above to see real-time updates on your package's location."
-              : "You can use this tracking number to check your package status on the carrier's website."
-            }
           </Text>
           
-          <Hr style={hr} />
-          
-          <Section>
-            <Heading style={h2}>What's in Your Bundle</Heading>
-            <Text style={bundleItems}>
-              • Alteryx branded tote bag<br/>
-              • Alteryx hat<br/>
-              • Alteryx stickers<br/>
-              • Alteryx water bottle<br/>
-              • Alteryx t-shirt{teeSize ? ` (size: ${teeSize})` : ''}
-            </Text>
-          </Section>
-          
-          <Hr style={hr} />
-          
-          <Section>
-            <Heading style={h2}>Shipping Address</Heading>
-            <Text style={addressText} dangerouslySetInnerHTML={{ __html: shippingAddress }} />
-          </Section>
+          <Text style={text}>
+            If you have any issues with the shipment, just reply to this email and we've got you covered.
+          </Text>
           
           <Text style={text}>
-            If you have any questions about your shipment, just reply to this email and we'll help.
+            Want to explore more while you wait?
+          </Text>
+          <Text style={linksList}>
+            • <Link 
+                href="https://login.microsoftonline.com/522f39d9-303d-488f-9deb-a6d77f1eafd8/oauth2/authorize?client%5Fid=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&response%5Fmode=form%5Fpost&response%5Ftype=code%20id%5Ftoken&resource=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&scope=openid&nonce=E501DC2101CFED7B5A188B3D4E15E4D5F3538E10ACB195A7%2D93FEA86E4A4088FA100F61027E05D93E3FFEC509945972676B1B4ECABBDC0A6D&redirect%5Furi=https%3A%2F%2Falteryx0%2Esharepoint%2Ecom%2F%5Fforms%2Fdefault%2Easpx&state=OD0w&claims=%7B%22id%5Ftoken%22%3A%7B%22xms%5Fcc%22%3A%7B%22values%22%3A%5B%22CP1%22%5D%7D%7D%7D&wsucxt=1&cobrandid=11bd8083%2D87e0%2D41b5%2Dbb78%2D0bc43c8a8e8a&client%2Drequest%2Did=bfcfbda1%2D80e9%2D0000%2De5c9%2D3d9dcb058e29"
+                style={linkStyle}
+              >
+                New Hire FAQs
+              </Link><br/>
+            • <Link 
+                href="https://login.microsoftonline.com/522f39d9-303d-488f-9deb-a6d77f1eafd8/oauth2/authorize?client%5Fid=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&response%5Fmode=form%5Fpost&response%5Ftype=code%20id%5Ftoken&resource=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&scope=openid&nonce=3AF55EC2C3561F84BE897BA52D01F3CA3BFE820847AD0D7B%2DEF9B3C96F35CAB04644E05D887666AB35A91571807ED5CAB5B2390D174BC5F84&redirect%5Furi=https%3A%2F%2Falteryx0%2Esharepoint%2Ecom%2F%5Fforms%2Fdefault%2Easpx&state=OD0w&claims=%7B%22id%5Ftoken%22%3A%7B%22xms%5Fcc%22%3A%7B%22values%22%3A%5B%22CP1%22%5D%7D%7D%7D&wsucxt=1&cobrandid=11bd8083%2D87e0%2D41b5%2Dbb78%2D0bc43c8a8e8a&client%2Drequest%2Did=c5cfbda1%2Dc091%2D0000%2De5c9%2D3ed7a8ead685"
+                style={linkStyle}
+              >
+                People & Culture Hub
+              </Link>
           </Text>
           
           <Text style={footer}>
-            — Whitestone<br/>
-            Alteryx New Hire Store
+            Talk soon,<br/>
+            Whitestone<br/>
+            on behalf of The Global Onboarding Team
           </Text>
         </Container>
       </Body>
@@ -168,7 +148,7 @@ const trackingSection = {
   border: '1px solid #e2e8f0',
 }
 
-const trackingLink = {
+const trackingLinkStyle = {
   color: '#2563eb',
   textDecoration: 'underline',
   fontWeight: 'bold',
@@ -206,6 +186,18 @@ const bundleItems = {
   backgroundColor: '#f5f8ff',
   borderRadius: '6px',
   borderLeft: '3px solid #2563eb',
+}
+
+const linksList = {
+  color: '#333',
+  fontSize: '14px',
+  lineHeight: '24px',
+  margin: '16px 0',
+}
+
+const linkStyle = {
+  color: '#2563eb',
+  textDecoration: 'underline',
 }
 
 const footer = {

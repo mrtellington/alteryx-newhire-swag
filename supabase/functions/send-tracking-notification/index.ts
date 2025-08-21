@@ -133,7 +133,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResult = await resend.emails.send({
       from: "admin@whitestonebranding.com",
       to: [userEmail],
-      subject: `Your Alteryx New Hire Bundle has shipped! 📦`,
+      subject: "🚚 Your Alteryx Kit Is On the Move!",
       html: html,
     });
 
