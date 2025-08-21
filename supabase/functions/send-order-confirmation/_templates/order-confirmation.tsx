@@ -111,7 +111,8 @@ export const OrderConfirmationEmail = ({
         
         <Text style={footer}>
           Cheers,<br/>
-          The Global Onboarding Team
+          Whitestone,<br/>
+          on behalf of the Global Onboarding Team
         </Text>
       </Container>
     </Body>

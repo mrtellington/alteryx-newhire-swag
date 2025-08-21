@@ -165,7 +165,7 @@ serve(async (req) => {
     const userSend = await resend.emails.send({
       from: "admin@whitestonebranding.com",
       to: [userEmail],
-      subject: "Your order confirmation",
+      subject: "🎁 Your Alteryx Welcome Kit Is on the Way!",
       html: userHtml,
     });
 
