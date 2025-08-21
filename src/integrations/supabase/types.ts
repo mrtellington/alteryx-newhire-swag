@@ -21,7 +21,7 @@ export type Database = {
           created_by: string | null
           email: string
           id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           active?: boolean
@@ -29,7 +29,7 @@ export type Database = {
           created_by?: string | null
           email: string
           id?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           active?: boolean
@@ -37,7 +37,7 @@ export type Database = {
           created_by?: string | null
           email?: string
           id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: []
       }
