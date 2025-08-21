@@ -62,6 +62,7 @@ export default function Admin() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0, currentUser: '' });
+  const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
 
   // Initialize session security monitoring
@@ -710,6 +711,96 @@ export default function Admin() {
     }
   };
 
+  const handleNuclearReset = async () => {
+    if (!confirm('⚠️ WARNING: This will permanently delete ALL users and auth accounts. Are you absolutely sure?')) {
+      return;
+    }
+
+    if (!confirm('🚨 FINAL WARNING: This action cannot be undone. All user data will be lost forever!')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    
+    try {
+      console.log('🗑️ Starting nuclear reset - deleting all users and auth accounts...');
+      
+      // Step 1: Delete all auth users first
+      console.log('🧹 Step 1: Deleting all auth accounts...');
+      const { data: cleanupData, error: cleanupError } = await supabase.functions.invoke('cleanup-auth-users', {
+        body: {}
+      });
+      
+      if (cleanupError) {
+        console.error('❌ Auth cleanup failed:', cleanupError);
+      } else {
+        console.log('✅ Auth cleanup completed:', cleanupData);
+        const deletedAuthCount = cleanupData?.totalDeleted || 0;
+        toast({
+          title: "Auth Cleanup Complete",
+          description: `Deleted ${deletedAuthCount} auth accounts`,
+        });
+      }
+
+      // Step 2: Delete all users from public.users table
+      console.log('🗑️ Step 2: Deleting all users from database...');
+      const { error: deleteUsersError } = await supabase
+        .from('users')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all users
+      
+      if (deleteUsersError) {
+        console.error('❌ Failed to delete users:', deleteUsersError);
+        toast({
+          title: "Database Cleanup Failed",
+          description: "Failed to delete users from database",
+          variant: "destructive"
+        });
+      } else {
+        console.log('✅ All users deleted from database');
+        toast({
+          title: "Database Cleaned",
+          description: "All users deleted from database",
+        });
+      }
+
+      // Step 3: Verify everything is clean
+      setTimeout(async () => {
+        const { data: remainingUsers, count } = await supabase
+          .from('users')
+          .select('*', { count: 'exact' });
+          
+        if (count === 0) {
+          console.log('✅ Nuclear reset complete - all data cleared!');
+          toast({
+            title: "🗑️ Nuclear Reset Complete",
+            description: "All users and auth accounts permanently deleted",
+          });
+        } else {
+          console.warn(`⚠️ ${count} users still remain in database`);
+          toast({
+            title: "Cleanup Incomplete",
+            description: `${count} users still remain`,
+            variant: "destructive"
+          });
+        }
+      }, 1000);
+
+      // Refresh the admin dashboard
+      fetchUsers();
+      
+    } catch (error) {
+      console.error('💥 Nuclear reset failed:', error);
+      toast({
+        title: "Reset Failed",
+        description: error instanceof Error ? error.message : "Failed to clear all data",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
 
   const exportUsers = () => {
     const csvContent = [
@@ -877,6 +968,16 @@ export default function Admin() {
             <Button onClick={() => csvFile && uploadCSV(csvFile)} disabled={!csvFile || isImporting}>
               <Upload className="w-4 h-4 mr-2" />
               {isImporting ? 'Importing...' : 'Import CSV'}
+            </Button>
+            
+            {/* Nuclear Reset Button */}
+            <Button 
+              onClick={handleNuclearReset}
+              disabled={isDeleting || isImporting}
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {isDeleting ? 'Deleting All...' : '🗑️ DELETE ALL'}
             </Button>
           </div>
           
