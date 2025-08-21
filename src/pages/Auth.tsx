@@ -61,7 +61,7 @@ const Auth = () => {
           const { data: users } = await supabase
             .from("users")
             .select("order_submitted")
-            .eq("id", session.user.id)
+            .eq("auth_user_id", session.user.id)
             .single();
           
           if (users?.order_submitted) {
@@ -83,7 +83,7 @@ const Auth = () => {
           const { data: users } = await supabase
             .from("users")
             .select("order_submitted")
-            .eq("id", session.user.id)
+            .eq("auth_user_id", session.user.id)
             .single();
           
           if (users?.order_submitted) {
