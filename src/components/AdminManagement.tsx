@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Shield, ShieldOff } from "lucide-react";
-import { secureEmailSchema, logSecurityEvent, isValidAdminEmail } from "@/lib/security";
+import { secureEmailSchema, logSecurityEvent } from "@/lib/security";
 
 interface AdminUser {
   id: string;

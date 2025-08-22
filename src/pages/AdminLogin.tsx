@@ -11,7 +11,7 @@ import {
   secureEmailSchema, 
   logEnhancedSecurityEvent, 
   RateLimiter,
-  isValidAdminEmail,
+  isAllowedEmailDomain,
   initializeSecureSession 
 } from "@/lib/security";
 
@@ -138,14 +138,14 @@ const AdminLogin = () => {
       return;
     }
 
-    if (!isValidAdminEmail(email)) {
+    if (!isAllowedEmailDomain(email)) {
       await logEnhancedSecurityEvent('admin_login_invalid_domain', { 
         email: email.substring(0, 20) + '...',
         domain: email.split('@')[1] 
       }, 'high');
       toast({
-        title: "Not an authorized user",
-        description: "Admin access is restricted to authorized administrators only.",
+        title: "Invalid Email Domain",
+        description: "Admin access requires @alteryx.com or @whitestonebranding.com email addresses.",
         variant: "destructive"
       });
       return;

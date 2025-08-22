@@ -184,13 +184,7 @@ export function isAllowedEmailDomain(email: string): boolean {
   return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
 }
 
-// Admin email validation
-export function isValidAdminEmail(email: string): boolean {
-  const emailTrimmed = email.trim().toLowerCase();
-  return emailTrimmed === 'admin@whitestonebranding.com' || 
-         emailTrimmed === 'dev@whitestonebranding.com' ||
-         emailTrimmed === 'cecilia@whitestonebranding.com';
-}
+// Admin email validation removed - now managed through admin_users table
 
 // Session security utilities
 export function generateSessionId(): string {
