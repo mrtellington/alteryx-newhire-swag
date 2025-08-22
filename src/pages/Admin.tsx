@@ -321,47 +321,44 @@ export default function Admin() {
     try {
       console.log('🔍 Fetching users with orders...');
       
-      // Fetch all users first
-      const { data: usersData, error: usersError } = await supabase
+      // Use the original join query approach since RLS policies work better with joins
+      const { data: usersData, error } = await supabase
         .from("users")
-        .select("*")
+        .select(`
+          *,
+          orders (
+            id,
+            order_number,
+            date_submitted,
+            status,
+            tee_size,
+            tracking_number,
+            shipping_carrier
+          )
+        `)
         .order("created_at", { ascending: false });
 
-      if (usersError) {
-        console.error('❌ Error fetching users:', usersError);
-        throw usersError;
-      }
-
-      // Fetch all orders separately
-      const { data: ordersData, error: ordersError } = await supabase
-        .from("orders")
-        .select("*");
-
-      if (ordersError) {
-        console.error('❌ Error fetching orders:', ordersError);
-        throw ordersError;
+      if (error) {
+        console.error('❌ Error fetching users:', error);
+        throw error;
       }
       
       console.log('📦 Raw users data from Supabase:', usersData);
-      console.log('📦 Raw orders data from Supabase:', ordersData);
-      console.log('📦 Orders count:', ordersData?.length || 0);
-      
-      // Find the support user specifically
-      const supportUser = usersData?.find(u => u.email === 'support@whitestonebranding.com');
-      console.log('🔍 Support user found:', supportUser);
-      
-      // Find orders for support user specifically
-      const supportOrders = ordersData?.filter(order => order.user_id === supportUser?.id);
-      console.log('🔍 Support user orders found:', supportOrders);
       
       // Transform the data to match our User interface
       const transformedUsers: User[] = (usersData || []).map(user => {
-        // Find orders for this user using the user's id (not auth_user_id)
-        const userOrders = (ordersData || []).filter(order => order.user_id === user.id);
+        // Ensure orders is always an array
+        const orders = Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : [];
+        
+        // Debug specific user
+        if (user.email === 'support@whitestonebranding.com') {
+          console.log('🔍 Support user raw data:', user);
+          console.log('🔍 Support user orders:', orders);
+        }
         
         return {
           ...user,
-          orders: userOrders
+          orders
         };
       });
       
