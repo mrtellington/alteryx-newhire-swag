@@ -73,6 +73,7 @@ export type Database = {
           date_submitted: string | null
           id: string
           order_number: string | null
+          shipping_carrier: string | null
           status: string | null
           tee_size: string | null
           tracking_number: string | null
@@ -82,6 +83,7 @@ export type Database = {
           date_submitted?: string | null
           id?: string
           order_number?: string | null
+          shipping_carrier?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null
@@ -91,6 +93,7 @@ export type Database = {
           date_submitted?: string | null
           id?: string
           order_number?: string | null
+          shipping_carrier?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null

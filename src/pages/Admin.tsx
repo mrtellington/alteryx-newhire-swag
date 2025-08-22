@@ -275,8 +275,8 @@ export default function Admin() {
         console.log('User is not admin, logging unauthorized access');
         // Log unauthorized admin access attempt
         await supabase.rpc('log_security_event', {
-          event_type: 'unauthorized_admin_access',
-          metadata: { 
+          event_type_param: 'unauthorized_admin_access',
+          metadata_param: { 
             email: session.user.email,
             attempted_access: 'admin_dashboard',
             timestamp: new Date().toISOString()
@@ -296,8 +296,8 @@ export default function Admin() {
       console.log('Admin access confirmed, logging successful access');
       // Log successful admin access
       await supabase.rpc('log_security_event', {
-        event_type: 'admin_dashboard_access',
-        metadata: { 
+        event_type_param: 'admin_dashboard_access',
+        metadata_param: { 
           email: session.user.email,
           timestamp: new Date().toISOString()
         }

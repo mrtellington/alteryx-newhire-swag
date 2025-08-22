@@ -42,7 +42,10 @@ export const useEnhancedSecurity = () => {
 
         const failedLogins = events?.length || 0;
         const suspiciousIPs = [...new Set(
-          events?.map(e => e.ip_address).filter(ip => ip && ip !== 'unknown') || []
+          events?.map(e => {
+            const metadata = typeof e.metadata === 'object' && e.metadata ? e.metadata as any : {};
+            return metadata.ip_address || metadata.client_ip;
+          }).filter(ip => ip && ip !== 'unknown') || []
         )];
 
         // Generate alerts based on patterns
