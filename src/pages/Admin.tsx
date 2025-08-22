@@ -319,8 +319,6 @@ export default function Admin() {
 
   const fetchUsers = async () => {
     try {
-      console.log("Starting to fetch users...");
-      
       const { data: usersData, error } = await supabase
         .from("users")
         .select(`
@@ -337,23 +335,14 @@ export default function Admin() {
         `)
         .order("created_at", { ascending: false });
 
-      console.log("Users fetch result:", { data: usersData, error });
-
       if (error) throw error;
       
       // Transform the data to match our User interface
-      const transformedUsers: User[] = (usersData || []).map(user => {
-        console.log(`Processing user ${user.email}:`, {
-          order_submitted: user.order_submitted,
-          orders: user.orders
-        });
-        return {
-          ...user,
-          orders: Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : []
-        };
-      });
+      const transformedUsers: User[] = (usersData || []).map(user => ({
+        ...user,
+        orders: Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : []
+      }));
       
-      console.log("Final transformed users:", transformedUsers);
       setUsers(transformedUsers);
       setFilteredUsers(transformedUsers);
     } catch (error) {
