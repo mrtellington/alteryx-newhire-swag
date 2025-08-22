@@ -11,10 +11,12 @@ import { Shield, AlertTriangle, Info, CheckCircle } from "lucide-react";
 interface SecurityEvent {
   id: string;
   event_type: string;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  user_email: string;
-  ip_address: string;
+  severity: 'low' | 'medium' | 'high' | 'critical' | null;
+  user_email: string | null;
+  ip_address: string | null;
+  user_id: string | null;
   metadata: any;
+  additional_context: string | null;
   created_at: string;
 }
 

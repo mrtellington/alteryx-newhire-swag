@@ -12,9 +12,11 @@ import { secureEmailSchema, logSecurityEvent, isValidAdminEmail } from "@/lib/se
 
 interface AdminUser {
   id: string;
-  user_id: string;
+  auth_user_id: string | null;
   email: string;
-  created_at: string;
+  full_name: string;
+  role: string | null;
+  created_at: string | null;
   created_by: string | null;
   active: boolean;
 }
@@ -69,8 +71,9 @@ export default function AdminManagement() {
       const { data, error } = await supabase
         .from("admin_users")
         .insert({
-          user_id: crypto.randomUUID(), // Generate a temporary user_id
+          auth_user_id: crypto.randomUUID(), // Generate a temporary auth_user_id
           email: newAdminEmail.toLowerCase(),
+          full_name: newAdminEmail.split('@')[0], // Use email prefix as placeholder
           created_by: (await supabase.auth.getUser()).data.user?.id
         })
         .select()
@@ -91,8 +94,8 @@ export default function AdminManagement() {
 
       // Log the admin creation event
       await supabase.rpc('log_security_event', {
-        event_type: 'admin_user_added',
-        metadata: { 
+        event_type_param: 'admin_user_added',
+        metadata_param: { 
           new_admin_email: newAdminEmail,
           added_by: (await supabase.auth.getUser()).data.user?.email
         }
@@ -127,8 +130,8 @@ export default function AdminManagement() {
 
       // Log the status change
       await supabase.rpc('log_security_event', {
-        event_type: 'admin_status_changed',
-        metadata: { 
+        event_type_param: 'admin_status_changed',
+        metadata_param: { 
           admin_id: adminId,
           new_status: !currentStatus ? 'active' : 'inactive',
           changed_by: (await supabase.auth.getUser()).data.user?.email

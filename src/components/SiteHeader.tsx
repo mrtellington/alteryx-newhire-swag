@@ -41,8 +41,8 @@ export default function SiteHeader() {
         // Log admin access attempts for security monitoring
         if (data) {
           await supabase.rpc('log_security_event', {
-            event_type: 'admin_access',
-            metadata: { action: 'admin_check', result: 'success' }
+            event_type_param: 'admin_access',
+            metadata_param: { action: 'admin_check', result: 'success' }
           });
         }
       }
@@ -72,8 +72,8 @@ export default function SiteHeader() {
           {isAdmin && (
             <Button variant="outline" onClick={async () => {
               await supabase.rpc('log_security_event', {
-                event_type: 'admin_panel_access',
-                metadata: { action: 'navigate_to_admin' }
+                event_type_param: 'admin_panel_access',
+                metadata_param: { action: 'navigate_to_admin' }
               });
               window.location.href = "/admin";
             }}>

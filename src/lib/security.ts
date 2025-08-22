@@ -147,8 +147,8 @@ export async function logSecurityEvent(
     };
 
     const { error } = await supabase.rpc('log_security_event', {
-      event_type: eventType,
-      metadata: enhancedMetadata
+      event_type_param: eventType,
+      metadata_param: enhancedMetadata
     });
 
     if (error) {

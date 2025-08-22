@@ -16,24 +16,30 @@ export type Database = {
     Tables: {
       admin_users: {
         Row: {
+          active: boolean | null
           auth_user_id: string | null
           created_at: string | null
+          created_by: string | null
           email: string
           full_name: string
           id: string
           role: string | null
         }
         Insert: {
+          active?: boolean | null
           auth_user_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           email: string
           full_name: string
           id?: string
           role?: string | null
         }
         Update: {
+          active?: boolean | null
           auth_user_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           email?: string
           full_name?: string
           id?: string
@@ -66,6 +72,7 @@ export type Database = {
         Row: {
           date_submitted: string | null
           id: string
+          order_number: string | null
           status: string | null
           tee_size: string | null
           tracking_number: string | null
@@ -74,6 +81,7 @@ export type Database = {
         Insert: {
           date_submitted?: string | null
           id?: string
+          order_number?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null
@@ -82,6 +90,7 @@ export type Database = {
         Update: {
           date_submitted?: string | null
           id?: string
+          order_number?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null
@@ -139,7 +148,12 @@ export type Database = {
           created_at: string | null
           event_type: string
           id: string
+          ip_address: string | null
           metadata: Json | null
+          severity:
+            | Database["public"]["Enums"]["security_event_severity"]
+            | null
+          user_email: string | null
           user_id: string | null
         }
         Insert: {
@@ -147,7 +161,12 @@ export type Database = {
           created_at?: string | null
           event_type: string
           id?: string
+          ip_address?: string | null
           metadata?: Json | null
+          severity?:
+            | Database["public"]["Enums"]["security_event_severity"]
+            | null
+          user_email?: string | null
           user_id?: string | null
         }
         Update: {
@@ -155,7 +174,12 @@ export type Database = {
           created_at?: string | null
           event_type?: string
           id?: string
+          ip_address?: string | null
           metadata?: Json | null
+          severity?:
+            | Database["public"]["Enums"]["security_event_severity"]
+            | null
+          user_email?: string | null
           user_id?: string | null
         }
         Relationships: [
