@@ -319,45 +319,39 @@ export default function Admin() {
 
   const fetchUsers = async () => {
     try {
-      // Fetch all users with their orders using a left join to ensure we get users even without orders
-      const { data: usersWithOrders, error } = await supabase
+      // First get all users
+      const { data: usersData, error: usersError } = await supabase
         .from("users")
-        .select(`
-          *,
-          orders!left (
-            id,
-            order_number,
-            date_submitted,
-            status,
-            tee_size,
-            tracking_number,
-            shipping_carrier
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error('❌ Error fetching users with orders:', error);
-        throw error;
+      if (usersError) {
+        console.error('❌ Error fetching users:', usersError);
+        throw usersError;
       }
+
+      // Try to get orders directly
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select("*");
+
+      console.log('📦 Users data:', usersData?.length);
+      console.log('📦 Orders data:', ordersData?.length);
+      console.log('📦 Orders error:', ordersError);
+      
+      // If orders failed due to RLS, use empty array
+      const finalOrders = ordersData || [];
       
       // Transform the data to match our User interface
-      const transformedUsers: User[] = (usersWithOrders || []).map(user => {
-        // Ensure orders is always an array - handle both single order object and array
-        let orders: any[] = [];
-        if (user.orders) {
-          if (Array.isArray(user.orders)) {
-            // Filter out any null orders from the array
-            orders = user.orders.filter((order: any) => order && order.id);
-          } else if ((user.orders as any).id) {
-            // Single order object
-            orders = [user.orders];
-          }
-        }
+      const transformedUsers: User[] = (usersData || []).map(user => {
+        // Find orders for this user
+        const userOrders = finalOrders.filter((order: any) => order.user_id === user.id);
+        
+        console.log(`🔍 User ${user.email}: ${userOrders.length} orders`);
         
         return {
           ...user,
-          orders
+          orders: userOrders
         };
       });
       
