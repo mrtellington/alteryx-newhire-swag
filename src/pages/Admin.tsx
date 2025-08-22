@@ -76,6 +76,16 @@ export default function Admin() {
   const { isAdmin, isViewOnly, hasAdminAccess } = useAdminRole();
 
   const sendTrackingNotification = async (orderId: string) => {
+    // Check if user is full admin before allowing email sending
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full administrators can send tracking notifications",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       console.log('Sending tracking notification for order:', orderId);
       
@@ -255,12 +265,10 @@ export default function Admin() {
 
       console.log('Session found, checking admin status for:', session.user.email);
 
-      // Use the new admin checking function
-      const { data: isAdmin, error } = await supabase.rpc('is_user_admin', { 
-        user_email: session.user.email 
-      });
+      // Check if user has any admin access (full or view-only)
+      const { data: hasAccess, error } = await supabase.rpc('get_admin_role');
 
-      console.log('Admin check result:', { isAdmin, error });
+      console.log('Admin role check result:', { hasAccess, error });
 
       if (error) {
         console.error('Error checking admin status:', error);
@@ -274,7 +282,7 @@ export default function Admin() {
         return;
       }
 
-      if (!isAdmin) {
+      if (hasAccess === 'none') {
         console.log('User is not admin, logging unauthorized access');
         // Log unauthorized admin access attempt
         await supabase.rpc('log_security_event', {
@@ -1065,6 +1073,33 @@ export default function Admin() {
             <p className="text-sm text-muted-foreground">
               ✅ Enhanced rate limiting protection prevents auth creation failures
             </p>
+            {isAdmin && (
+              <div className="pt-4 border-t border-destructive/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-medium text-destructive">⚠️ Danger Zone</h3>
+                    <p className="text-xs text-muted-foreground">
+                      This will permanently delete ALL user data and auth accounts
+                    </p>
+                  </div>
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleNuclearReset}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      '🗑️ Nuclear Reset'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -1250,23 +1285,23 @@ export default function Admin() {
                                        <Edit className="w-3 h-3" />
                                      </Button>
                                    )}
-                                  {order.tracking_number && (
-                                    <TooltipProvider>
-                                      <Tooltip>
-                                        <TooltipTrigger asChild>
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => sendTrackingNotification(order.id)}
-                                            className="text-xs px-2 py-1 h-6"
-                                          >
-                                            <Truck className="w-3 h-3" />
-                                          </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                          <p>Send tracking notification</p>
-                                        </TooltipContent>
-                                      </Tooltip>
+                                   {order.tracking_number && isAdmin && (
+                                     <TooltipProvider>
+                                       <Tooltip>
+                                         <TooltipTrigger asChild>
+                                           <Button
+                                             size="sm"
+                                             variant="outline"
+                                             onClick={() => sendTrackingNotification(order.id)}
+                                             className="text-xs px-2 py-1 h-6"
+                                           >
+                                             <Truck className="w-3 h-3" />
+                                           </Button>
+                                         </TooltipTrigger>
+                                         <TooltipContent>
+                                           <p>Send tracking notification</p>
+                                         </TooltipContent>
+                                       </Tooltip>
                                     </TooltipProvider>
                                   )}
                                 </div>

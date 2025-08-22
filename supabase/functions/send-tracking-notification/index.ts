@@ -73,6 +73,37 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize Supabase client with service role key
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Get authorization header and validate user role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: 'Authentication required' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    // Create authenticated client to check user role
+    const supabaseAuth = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    // Check if user is a full admin (not view-only)
+    const { data: userRole, error: roleError } = await supabaseAuth.rpc('get_admin_role');
+    
+    if (roleError || userRole !== 'admin') {
+      console.log('Access denied - user role:', userRole, 'error:', roleError);
+      return new Response(JSON.stringify({ 
+        error: 'Access denied: Only full administrators can send tracking notifications' 
+      }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // Get order details with user information
     const { data: order, error: orderError } = await supabase
       .from("orders")
