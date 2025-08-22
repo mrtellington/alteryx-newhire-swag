@@ -1,46 +1,245 @@
-# Getting Started with Create React App
+# Alteryx Swag Portal Clone (Private Order App)
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A secure, single-product ordering portal for Alteryx employees, built with React, TypeScript, and Supabase.
 
-## Available Scripts
+## 🚀 Quick Start
 
-In the project directory, you can run:
+1. **Clone and setup:**
+   ```bash
+   cd alteryx-swag-portal
+   chmod +x setup.sh
+   ./setup.sh
+   ```
 
-### `npm start`
+2. **Run the database setup:**
+   - Copy the contents of `database-setup.sql`
+   - Run it in your Supabase SQL Editor
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+3. **Start development server:**
+   ```bash
+   npm start
+   ```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+4. **Visit:** `http://localhost:3000`
 
-### `npm test`
+## 🔧 Environment Variables
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Create a `.env` file in the project root:
 
-### `npm run build`
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=https://emnemfewmpjczkgwzrjv.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbmVtZmV3bXBqY3prZ3d6cmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTMwOTIsImV4cCI6MjA3MDYyOTA5Mn0.n5x7VHDee9vCJuQnrPfpdRl7iE0y0lfe1pRO3BxHwkA
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+# Email Configuration
+VITE_FROM_EMAIL=admin@whitestonebranding.com
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Legacy support
+REACT_APP_SUPABASE_URL=https://emnemfewmpjczkgwzrjv.supabase.co
+REACT_APP_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbmVtZmV3bXBqY3prZ3d6cmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTMwOTIsImV4cCI6MjA3MDYyOTA5Mn0.n5x7VHDee9vCJuQnrPfpdRl7iE0y0lfe1pRO3BxHwkA
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 🏗️ Tech Stack
 
-### `npm run eject`
+- **Frontend:** React 19, TypeScript, Tailwind CSS, React Router
+- **Backend:** Supabase (PostgreSQL, Auth, Edge Functions)
+- **Deployment:** Google Cloud Run, Firebase Hosting, Docker
+- **Email:** Resend (via Supabase Edge Functions)
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+## 🔐 Authentication & Security
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Domain Restrictions
+- Primary: `@alteryx.com` emails only
+- Developer exceptions: `@whitestonebranding.com` emails
+- Special case: `tod.ellington@gmail.com`
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+### Auth Flow
+1. User enters email on login page
+2. Domain validation occurs
+3. Magic link sent via Supabase Auth
+4. User clicks link and is authenticated
+5. Profile fetched from `users` table
+6. Access granted if `invited = true`
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### Security Features
+- Row Level Security (RLS) on all tables
+- One-order-per-user enforcement
+- Admin-only access to sensitive data
+- Security event logging
+- Domain validation at multiple levels
 
-## Learn More
+## 📊 Database Schema
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Tables
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+**users**
+- `id` (UUID, Primary Key)
+- `email` (TEXT, Unique)
+- `invited` (BOOLEAN)
+- `full_name` (TEXT)
+- `shipping_address` (JSONB)
+- `order_submitted` (BOOLEAN)
+- `created_at` (TIMESTAMP)
+
+**orders**
+- `id` (UUID, Primary Key)
+- `user_id` (UUID, Foreign Key)
+- `date_submitted` (TIMESTAMP)
+
+**inventory**
+- `product_id` (UUID, Primary Key)
+- `sku` (TEXT, Unique)
+- `name` (TEXT)
+- `quantity_available` (INTEGER)
+
+**security_events**
+- `id` (UUID, Primary Key)
+- `event_type` (TEXT)
+- `user_id` (UUID, Foreign Key)
+- `details` (JSONB)
+- `created_at` (TIMESTAMP)
+
+### Key Functions
+
+- `create_user_from_webhook()` - Creates/updates users from Cognito Forms
+- `place_order()` - Handles order placement with inventory management
+- `log_security_event()` - Logs security events
+- `is_system_admin()` - Checks if user is admin
+- `is_current_user_admin()` - RLS helper for admin access
+
+## 🔄 Cognito Forms Integration
+
+### Webhook Setup
+1. Configure Cognito Form with JSON webhook
+2. Webhook URL: `https://your-domain.com/api/cognito-webhook`
+3. Payload includes: email, full_name, address fields
+
+### Webhook Handler
+- Validates required fields
+- Checks email domain
+- Creates/updates user in database
+- Sends welcome email
+- Logs security event
+
+## 👨‍💼 Admin Features
+
+### Admin Access
+- Hardcoded system admins in `is_system_admin()` function
+- Admin emails: `admin@whitestonebranding.com`, `tod.ellington@whitestonebranding.com`, `dev@whitestonebranding.com`
+
+### Admin Dashboard (`/admin`)
+- View all users with status
+- View all orders
+- Export data to CSV
+- Security event logs
+
+## 🚀 Deployment
+
+### Google Cloud Run
+```bash
+npm run deploy:gcp
+```
+
+### Firebase Hosting
+```bash
+npm run deploy:firebase
+```
+
+### Docker
+```bash
+npm run docker:build
+npm run docker:run
+```
+
+## 🧪 Testing
+
+### Acceptance Tests
+
+**Auth Flow:**
+- ✅ New pre-registered user receives magic link
+- ✅ User lands on `/shop` and stays logged in
+- ✅ Session persists through refresh and navigation
+- ✅ Non-invited users are cleanly redirected
+- ✅ Non-allowed domains are refused
+
+**Order Flow:**
+- ✅ First order succeeds (inventory decremented, order created)
+- ✅ Second attempt prevented (frontend + backend)
+- ✅ Confirmation email sent
+
+**Admin Flow:**
+- ✅ Admin can access `/admin`
+- ✅ Admin can view users and orders
+- ✅ Admin can export CSV data
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+**"Verifying access..." stuck:**
+- Check if user exists in `users` table
+- Verify `invited = true`
+- Check browser console for errors
+
+**"Access denied":**
+- User authenticated but not in `users` table
+- User exists but `invited = false`
+
+**Environment variables not loading:**
+- Ensure `.env` file exists in project root
+- Check variable names (VITE_ prefix for Vite)
+- Restart development server
+
+### Developer Setup
+
+To add yourself as a developer user:
+
+```sql
+INSERT INTO users (
+  id, 
+  email, 
+  full_name, 
+  invited, 
+  shipping_address, 
+  created_at
+) VALUES (
+  '7c072e93-c879-49d2-9d0e-f7447b2d9ab8',
+  'tod.ellington@whitestonebranding.com',
+  'Tod Ellington',
+  true,
+  '{"address_line_1": "123 Developer Street", "city": "Test City", "state": "CA", "zip_code": "90210", "country": "USA"}',
+  NOW()
+) ON CONFLICT (id) DO UPDATE SET
+  invited = true;
+```
+
+## 📝 Recent Fixes
+
+### Auth Flow Improvements
+- ✅ Fixed race conditions in session management
+- ✅ Improved ProtectedRoute loading logic
+- ✅ Added proper error handling and timeouts
+- ✅ Enhanced RLS policies for auth flow
+- ✅ Added security event logging
+
+### Environment Configuration
+- ✅ Updated to use VITE_ prefix for environment variables
+- ✅ Added legacy REACT_APP_ support
+- ✅ Improved Supabase client configuration
+
+### Admin Features
+- ✅ Added admin dashboard with user/order management
+- ✅ Implemented CSV export functionality
+- ✅ Added security event logging
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+Private project for Alteryx internal use.
