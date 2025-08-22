@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Auto Create Auth Users</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .log { background: #f8f9fa; border: 1px solid #e9ecef; padding: 16px; margin: 16px 0; border-radius: 6px; font-family: monospace; white-space: pre-wrap; min-height: 200px; }
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+        .info { color: #3b82f6; }
+    </style>
+</head>
+<body>
+    <h1>Creating Auth Users for All Database Users</h1>
+    <p>Status: <span id="status">Starting...</span></p>
+    <div id="log" class="log"></div>
+
+    <script>
+        const logEl = document.getElementById('log');
+        const statusEl = document.getElementById('status');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logEl.innerHTML += `<span class="${type}">[${timestamp}] ${message}</span>\n`;
+            logEl.scrollTop = logEl.scrollHeight;
+            console.log(message);
+        }
+
+        async function createAllAuthUsers() {
+            try {
+                statusEl.textContent = 'Running...';
+                log('🚀 Starting auth user creation for all 11 remaining users...', 'info');
+                
+                const response = await fetch('https://emnemfewmpjczkgwzrjv.supabase.co/functions/v1/create-auth-users', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbmVtZmV3bXBqY3prZ3d6cmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTMwOTIsImV4cCI6MjA3MDYyOTA5Mn0.n5x7VHDee9vCJuQnrPfpdRl7iE0y0lfe1pRO3BxHwkA',
+                        'Content-Type': 'application/json',
+                        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVtbmVtZmV3bXBqY3prZ3d6cmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUwNTMwOTIsImV4cCI6MjA3MDYyOTA5Mn0.n5x7VHDee9vCJuQnrPfpdRl7iE0y0lfe1pRO3BxHwkA'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                log(`✅ Auth user creation completed!`, 'success');
+                log(`📊 Total processed: ${result.processed} users`, 'info');
+                log('', 'info');
+                log('📝 Detailed results:', 'info');
+                
+                let successCount = 0;
+                let errorCount = 0;
+                
+                result.results.forEach((userResult, index) => {
+                    if (userResult.success) {
+                        successCount++;
+                        log(`${index + 1}. ✅ ${userResult.email}: ${userResult.action}`, 'success');
+                        if (userResult.auth_user_id) {
+                            log(`     🔑 Auth ID: ${userResult.auth_user_id}`, 'info');
+                        }
+                    } else {
+                        errorCount++;
+                        log(`${index + 1}. ❌ ${userResult.email}: ${userResult.error}`, 'error');
+                    }
+                });
+
+                log('', 'info');
+                log(`📈 Summary: ${successCount} successful, ${errorCount} errors`, successCount === result.processed ? 'success' : 'error');
+                log('', 'info');
+                log('🎉 All done! All 32 users should now have auth accounts and be able to login and order.', 'success');
+                
+                statusEl.textContent = `Completed! ${successCount}/${result.processed} successful`;
+
+            } catch (error) {
+                log(`❌ Exception: ${error.message}`, 'error');
+                statusEl.textContent = 'Failed';
+                console.error('Full error:', error);
+            }
+        }
+
+        // Auto-run when page loads
+        window.addEventListener('load', () => {
+            setTimeout(createAllAuthUsers, 1000);
+        });
+    </script>
+</body>
+</html>

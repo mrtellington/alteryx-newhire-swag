@@ -1,0 +1,39 @@
+project_id = "emnemfewmpjczkgwzrjv"
+
+[auth.email]
+enable_signup = false
+double_confirm_changes = true
+enable_confirmations = true
+
+[auth.email.smtp]
+host = "smtp.resend.com"
+port = 587
+user = "resend"
+pass = "env:RESEND_API_KEY"
+admin_email = "admin@whitestonebranding.com"
+sender_name = "Whitestone"
+
+[auth.hook.send_email]
+enabled = true
+url = "https://emnemfewmpjczkgwzrjv.supabase.co/functions/v1/auth-email-hook"
+
+[functions.address-autocomplete]
+verify_jwt = true
+
+[functions.auth-email-hook]
+verify_jwt = false
+
+[functions.send-order-confirmation]
+verify_jwt = true
+
+[functions.send-tracking-notification]
+verify_jwt = true
+
+[functions.cognito-webhook]
+verify_jwt = false
+
+[functions.cleanup-auth-users]
+verify_jwt = false
+
+[functions.trigger-cleanup]
+verify_jwt = false
