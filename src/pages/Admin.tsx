@@ -320,39 +320,54 @@ export default function Admin() {
   const fetchUsers = async () => {
     try {
       console.log('🔍 Fetching users with orders...');
-      const { data: usersData, error } = await supabase
+      
+      // Fetch all users first
+      const { data: usersData, error: usersError } = await supabase
         .from("users")
-        .select(`
-          *,
-          orders (
-            id,
-            order_number,
-            date_submitted,
-            tee_size,
-            tracking_number,
-            shipping_carrier,
-            status
-          )
-        `)
+        .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error('❌ Error fetching users:', error);
-        throw error;
+      if (usersError) {
+        console.error('❌ Error fetching users:', usersError);
+        throw usersError;
+      }
+
+      // Fetch all orders separately
+      const { data: ordersData, error: ordersError } = await supabase
+        .from("orders")
+        .select(`
+          id,
+          user_id,
+          order_number,
+          date_submitted,
+          tee_size,
+          tracking_number,
+          shipping_carrier,
+          status
+        `);
+
+      if (ordersError) {
+        console.error('❌ Error fetching orders:', ordersError);
+        throw ordersError;
       }
       
       console.log('📦 Raw users data from Supabase:', usersData);
+      console.log('📦 Raw orders data from Supabase:', ordersData);
       
       // Transform the data to match our User interface
       const transformedUsers: User[] = (usersData || []).map(user => {
+        // Find orders for this user
+        const userOrders = (ordersData || []).filter(order => order.user_id === user.id);
+        
         const transformedUser = {
           ...user,
-          orders: Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : []
+          orders: userOrders
         };
         
         // Debug specific user
         if (user.email === 'support@whitestonebranding.com') {
           console.log('🔍 Support user raw data:', user);
+          console.log('🔍 Support user orders:', userOrders);
           console.log('🔍 Support user transformed:', transformedUser);
         }
         
@@ -362,7 +377,8 @@ export default function Admin() {
       console.log('✅ Transformed users count:', transformedUsers.length);
       console.log('📋 First few users with orders:', transformedUsers.slice(0, 3).map(u => ({ 
         email: u.email, 
-        orders: u.orders 
+        orders: u.orders?.length || 0,
+        orderDetails: u.orders 
       })));
       
       setUsers(transformedUsers);
