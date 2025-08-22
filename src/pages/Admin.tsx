@@ -319,67 +319,31 @@ export default function Admin() {
 
   const fetchUsers = async () => {
     try {
-      console.log('🔍 Fetching users with orders...');
-      
       // Fetch all users first
       const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (usersError) {
-        console.error('❌ Error fetching users:', usersError);
-        throw usersError;
-      }
+      if (usersError) throw usersError;
 
       // Fetch all orders separately
       const { data: ordersData, error: ordersError } = await supabase
         .from("orders")
-        .select(`
-          id,
-          user_id,
-          order_number,
-          date_submitted,
-          tee_size,
-          tracking_number,
-          shipping_carrier,
-          status
-        `);
+        .select("*");
 
-      if (ordersError) {
-        console.error('❌ Error fetching orders:', ordersError);
-        throw ordersError;
-      }
-      
-      console.log('📦 Raw users data from Supabase:', usersData);
-      console.log('📦 Raw orders data from Supabase:', ordersData);
+      if (ordersError) throw ordersError;
       
       // Transform the data to match our User interface
       const transformedUsers: User[] = (usersData || []).map(user => {
-        // Find orders for this user
+        // Find orders for this user using the user's id (not auth_user_id)
         const userOrders = (ordersData || []).filter(order => order.user_id === user.id);
         
-        const transformedUser = {
+        return {
           ...user,
           orders: userOrders
         };
-        
-        // Debug specific user
-        if (user.email === 'support@whitestonebranding.com') {
-          console.log('🔍 Support user raw data:', user);
-          console.log('🔍 Support user orders:', userOrders);
-          console.log('🔍 Support user transformed:', transformedUser);
-        }
-        
-        return transformedUser;
       });
-      
-      console.log('✅ Transformed users count:', transformedUsers.length);
-      console.log('📋 First few users with orders:', transformedUsers.slice(0, 3).map(u => ({ 
-        email: u.email, 
-        orders: u.orders?.length || 0,
-        orderDetails: u.orders 
-      })));
       
       setUsers(transformedUsers);
       setFilteredUsers(transformedUsers);
