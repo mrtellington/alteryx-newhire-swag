@@ -39,24 +39,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [userProfile, setUserProfile] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUserProfile = useCallback(async (userId: string) => {
-    console.log('🔐 AuthContext: Fetching user profile for:', userId);
+  const fetchUserProfile = useCallback(async (userId: string, userEmail?: string) => {
+    console.log('🔐 AuthContext: Fetching user profile for userId:', userId, 'email:', userEmail);
     
     try {
-      const { data, error } = await supabase
+      // First try to find by auth_user_id
+      let { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', userId)
-        .single();
+        .maybeSingle();
+
+      // If no result and we have an email, try finding by email and update the auth_user_id
+      if (!data && userEmail) {
+        console.log('🔐 AuthContext: No record found by auth_user_id, trying by email:', userEmail);
+        const { data: emailData, error: emailError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', userEmail.toLowerCase())
+          .maybeSingle();
+
+        if (emailData && !emailError) {
+          console.log('🔐 AuthContext: Found user by email, updating auth_user_id');
+          // Update the user record with the auth_user_id
+          const { data: updatedData, error: updateError } = await supabase
+            .from('users')
+            .update({ auth_user_id: userId })
+            .eq('id', emailData.id)
+            .select('*')
+            .single();
+
+          if (!updateError && updatedData) {
+            data = updatedData;
+            error = null;
+          }
+        }
+      }
 
       if (error) {
         console.error('🔐 AuthContext: Error fetching user profile:', error);
         setUserProfile(null);
         return false;
-      } else {
+      } else if (data) {
         console.log('🔐 AuthContext: User profile loaded:', data);
         setUserProfile(data);
         return true;
+      } else {
+        console.log('🔐 AuthContext: No user profile found for userId:', userId, 'email:', userEmail);
+        setUserProfile(null);
+        return false;
       }
     } catch (error) {
       console.error('🔐 AuthContext: Error fetching user profile:', error);
@@ -71,7 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(session?.user ?? null);
     
     if (session?.user) {
-      await fetchUserProfile(session.user.id);
+      await fetchUserProfile(session.user.id, session.user.email);
     } else {
       setUserProfile(null);
     }
@@ -100,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          fetchUserProfile(session.user.id);
+          fetchUserProfile(session.user.id, session.user.email);
         }
       }
       
@@ -144,16 +175,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return false;
     }
 
-    console.log('🔐 AuthContext: Checking access for user:', user.id);
+    console.log('🔐 AuthContext: Checking access for user:', user.id, 'email:', user.email);
     try {
       const { data, error } = await supabase
         .from('users')
         .select('invited')
         .eq('auth_user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
+      if (error) {
         console.log('🔐 AuthContext: Error checking access:', error);
+        return false;
+      }
+      
+      if (!data) {
+        console.log('🔐 AuthContext: No user record found for auth_user_id:', user.id);
         return false;
       }
       
