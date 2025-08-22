@@ -319,14 +319,12 @@ export default function Admin() {
 
   const fetchUsers = async () => {
     try {
-      console.log('🔍 Fetching users with orders...');
-      
-      // Use the original join query approach since RLS policies work better with joins
-      const { data: usersData, error } = await supabase
+      // Fetch all users with their orders using a left join to ensure we get users even without orders
+      const { data: usersWithOrders, error } = await supabase
         .from("users")
         .select(`
           *,
-          orders (
+          orders!left (
             id,
             order_number,
             date_submitted,
@@ -339,21 +337,22 @@ export default function Admin() {
         .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('❌ Error fetching users:', error);
+        console.error('❌ Error fetching users with orders:', error);
         throw error;
       }
       
-      console.log('📦 Raw users data from Supabase:', usersData);
-      
       // Transform the data to match our User interface
-      const transformedUsers: User[] = (usersData || []).map(user => {
-        // Ensure orders is always an array
-        const orders = Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : [];
-        
-        // Debug specific user
-        if (user.email === 'support@whitestonebranding.com') {
-          console.log('🔍 Support user raw data:', user);
-          console.log('🔍 Support user orders:', orders);
+      const transformedUsers: User[] = (usersWithOrders || []).map(user => {
+        // Ensure orders is always an array - handle both single order object and array
+        let orders: any[] = [];
+        if (user.orders) {
+          if (Array.isArray(user.orders)) {
+            // Filter out any null orders from the array
+            orders = user.orders.filter((order: any) => order && order.id);
+          } else if ((user.orders as any).id) {
+            // Single order object
+            orders = [user.orders];
+          }
         }
         
         return {
