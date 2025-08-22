@@ -319,6 +319,7 @@ export default function Admin() {
 
   const fetchUsers = async () => {
     try {
+      console.log('🔍 Fetching users with orders...');
       const { data: usersData, error } = await supabase
         .from("users")
         .select(`
@@ -335,13 +336,34 @@ export default function Admin() {
         `)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error fetching users:', error);
+        throw error;
+      }
+      
+      console.log('📦 Raw users data from Supabase:', usersData);
       
       // Transform the data to match our User interface
-      const transformedUsers: User[] = (usersData || []).map(user => ({
-        ...user,
-        orders: Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : []
-      }));
+      const transformedUsers: User[] = (usersData || []).map(user => {
+        const transformedUser = {
+          ...user,
+          orders: Array.isArray(user.orders) ? user.orders : user.orders ? [user.orders] : []
+        };
+        
+        // Debug specific user
+        if (user.email === 'support@whitestonebranding.com') {
+          console.log('🔍 Support user raw data:', user);
+          console.log('🔍 Support user transformed:', transformedUser);
+        }
+        
+        return transformedUser;
+      });
+      
+      console.log('✅ Transformed users count:', transformedUsers.length);
+      console.log('📋 First few users with orders:', transformedUsers.slice(0, 3).map(u => ({ 
+        email: u.email, 
+        orders: u.orders 
+      })));
       
       setUsers(transformedUsers);
       setFilteredUsers(transformedUsers);
