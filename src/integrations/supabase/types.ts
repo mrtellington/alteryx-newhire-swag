@@ -294,6 +294,19 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_all_orders_for_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          date_submitted: string
+          id: string
+          order_number: string
+          shipping_carrier: string
+          status: string
+          tee_size: string
+          tracking_number: string
+          user_id: string
+        }[]
+      }
       get_auth_users_to_clean: {
         Args: Record<PropertyKey, never>
         Returns: {

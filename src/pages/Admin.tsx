@@ -330,10 +330,9 @@ export default function Admin() {
         throw usersError;
       }
 
-      // Try to get orders directly
+      // Try to get orders using the new admin function
       const { data: ordersData, error: ordersError } = await supabase
-        .from("orders")
-        .select("*");
+        .rpc('get_all_orders_for_admin');
 
       console.log('📦 Users data:', usersData?.length);
       console.log('📦 Orders data:', ordersData?.length);
