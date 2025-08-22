@@ -29,8 +29,8 @@ interface User {
   created_at: string;
   orders?: Array<{
     id: string;
-    order_number: string;
-    date_submitted: string;
+    order_number: string | null;
+    date_submitted: string | null;
     tee_size: string | null;
     tracking_number?: string | null;
     shipping_carrier?: string | null;
