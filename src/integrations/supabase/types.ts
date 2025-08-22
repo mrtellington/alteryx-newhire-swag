@@ -333,6 +333,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_full_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_secure_readonly_admin: {
         Args: { admin_email?: string }
         Returns: boolean
