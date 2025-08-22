@@ -16,6 +16,7 @@ sender_name = "Whitestone"
 [auth.hook.send_email]
 enabled = true
 url = "https://emnemfewmpjczkgwzrjv.supabase.co/functions/v1/auth-email-hook"
+secrets = ["AUTH_EMAIL_HOOK_SECRET"]
 
 [functions.address-autocomplete]
 verify_jwt = true
