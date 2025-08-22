@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Shield, ShieldOff } from "lucide-react";
+import { Plus, Shield, ShieldOff, Eye } from "lucide-react";
 import { secureEmailSchema, logSecurityEvent } from "@/lib/security";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
 interface AdminUser {
   id: string;
@@ -26,7 +29,9 @@ export default function AdminManagement() {
   const [loading, setLoading] = useState(true);
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false);
   const [newAdminEmail, setNewAdminEmail] = useState("");
+  const [newAdminRole, setNewAdminRole] = useState<"admin" | "view_only">("view_only");
   const { toast } = useToast();
+  const { isAdmin } = useAdminRole();
 
   useEffect(() => {
     fetchAdminUsers();
@@ -74,6 +79,7 @@ export default function AdminManagement() {
           auth_user_id: crypto.randomUUID(), // Generate a temporary auth_user_id
           email: newAdminEmail.toLowerCase(),
           full_name: newAdminEmail.split('@')[0], // Use email prefix as placeholder
+          role: newAdminRole,
           created_by: (await supabase.auth.getUser()).data.user?.id
         })
         .select()
@@ -97,17 +103,19 @@ export default function AdminManagement() {
         event_type_param: 'admin_user_added',
         metadata_param: { 
           new_admin_email: newAdminEmail,
+          role: newAdminRole,
           added_by: (await supabase.auth.getUser()).data.user?.email
         }
       });
 
       toast({
         title: "Success",
-        description: "Admin user added successfully"
+        description: `${newAdminRole === 'admin' ? 'Full admin' : 'View-only admin'} user added successfully`
       });
 
       setIsAddAdminOpen(false);
       setNewAdminEmail("");
+      setNewAdminRole("view_only");
       fetchAdminUsers();
     } catch (error) {
       console.error("Error adding admin user:", error);
@@ -120,6 +128,15 @@ export default function AdminManagement() {
   };
 
   const toggleAdminStatus = async (adminId: string, currentStatus: boolean) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full admins can modify admin status",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("admin_users")
@@ -167,37 +184,51 @@ export default function AdminManagement() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Admin User Management</CardTitle>
-          <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Admin
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Admin User</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="admin-email">Email</Label>
-                  <Input
-                    id="admin-email"
-                    type="email"
-                    value={newAdminEmail}
-                    onChange={(e) => setNewAdminEmail(e.target.value)}
-                    placeholder="admin@alteryx.com"
-                  />
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Must be @alteryx.com or @whitestonebranding.com
-                  </p>
-                </div>
-                <Button onClick={addAdmin} className="w-full" disabled={!newAdminEmail}>
-                  Add Admin User
+          {isAdmin && (
+            <Dialog open={isAddAdminOpen} onOpenChange={setIsAddAdminOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Admin
                 </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Add New Admin User</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="admin-email">Email</Label>
+                    <Input
+                      id="admin-email"
+                      type="email"
+                      value={newAdminEmail}
+                      onChange={(e) => setNewAdminEmail(e.target.value)}
+                      placeholder="admin@alteryx.com"
+                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Must be @alteryx.com or @whitestonebranding.com
+                    </p>
+                  </div>
+                  <div>
+                    <Label htmlFor="admin-role">Role</Label>
+                    <Select value={newAdminRole} onValueChange={(value) => setNewAdminRole(value as "admin" | "view_only")}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="view_only">View Only Admin</SelectItem>
+                        <SelectItem value="admin">Full Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button onClick={addAdmin} className="w-full" disabled={!newAdminEmail}>
+                    Add Admin User
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -206,9 +237,10 @@ export default function AdminManagement() {
             <TableHeader>
               <TableRow>
                 <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
+                {isAdmin && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -216,33 +248,42 @@ export default function AdminManagement() {
                 <TableRow key={admin.id}>
                   <TableCell className="font-medium">{admin.email}</TableCell>
                   <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs flex items-center gap-1 w-fit ${
-                        admin.active
-                          ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
-                      }`}
+                    <Badge 
+                      variant={admin.role === 'admin' ? 'default' : 'secondary'} 
+                      className="flex items-center gap-1 w-fit"
                     >
+                      {admin.role === 'admin' ? (
+                        <Shield className="h-3 w-3" />
+                      ) : (
+                        <Eye className="h-3 w-3" />
+                      )}
+                      {admin.role === 'admin' ? 'Full Admin' : 'View Only'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={admin.active ? 'default' : 'secondary'} className="flex items-center gap-1 w-fit">
                       {admin.active ? (
                         <Shield className="w-3 h-3" />
                       ) : (
                         <ShieldOff className="w-3 h-3" />
                       )}
                       {admin.active ? "Active" : "Inactive"}
-                    </span>
+                    </Badge>
                   </TableCell>
                   <TableCell>
-                    {new Date(admin.created_at).toLocaleDateString()}
+                    {admin.created_at ? new Date(admin.created_at).toLocaleDateString() : 'N/A'}
                   </TableCell>
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => toggleAdminStatus(admin.id, admin.active)}
-                    >
-                      {admin.active ? "Deactivate" : "Activate"}
-                    </Button>
-                  </TableCell>
+                  {isAdmin && (
+                    <TableCell>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleAdminStatus(admin.id, admin.active)}
+                      >
+                        {admin.active ? "Deactivate" : "Activate"}
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

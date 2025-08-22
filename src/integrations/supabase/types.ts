@@ -294,6 +294,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_admin_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_all_orders_for_admin: {
         Args: Record<PropertyKey, never>
         Returns: {

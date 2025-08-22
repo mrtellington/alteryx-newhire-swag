@@ -15,6 +15,7 @@ import { Plus, Upload, RotateCcw, Download, Search, ChevronUp, ChevronDown, Edit
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
 import { useSessionSecurity } from "@/hooks/useSessionSecurity";
+import { useAdminRole } from "@/hooks/useAdminRole";
 
 
 
@@ -71,6 +72,8 @@ export default function Admin() {
     enableActivityTracking: true,
     enableSecurityLogging: true
   });
+
+  const { isAdmin, isViewOnly, hasAdminAccess } = useAdminRole();
 
   const sendTrackingNotification = async (orderId: string) => {
     try {
@@ -369,6 +372,15 @@ export default function Admin() {
   };
 
   const addUser = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full admins can add users",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const shippingAddress = {
         address: newUser.address,
@@ -418,6 +430,15 @@ export default function Admin() {
   };
 
   const updateShippingInfo = async (orderId: string, trackingNumber: string, shippingCarrier: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full admins can update shipping information",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('orders')
@@ -455,6 +476,15 @@ export default function Admin() {
   };
 
   const resetOrderPermission = async (userId: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full admins can reset order permissions",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from("users")
@@ -480,6 +510,15 @@ export default function Admin() {
   };
 
   const uploadCSV = async (file: File) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full admins can upload CSV files",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsImporting(true);
     setImportProgress({ current: 0, total: 0, currentUser: '' });
     
@@ -723,6 +762,15 @@ export default function Admin() {
   };
 
   const handleNuclearReset = async () => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full admins can perform nuclear reset",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!confirm('⚠️ WARNING: This will permanently delete ALL users and auth accounts. Are you absolutely sure?')) {
       return;
     }
@@ -836,19 +884,25 @@ export default function Admin() {
     <div className="container mx-auto py-8 space-y-6">
       <SessionTimeoutWarning isAdmin={true} />
       <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <div>
+          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+          {isViewOnly && (
+            <p className="text-sm text-muted-foreground mt-1">View-only access</p>
+          )}
+        </div>
         <div className="flex gap-2">
           <Button onClick={exportUsers} variant="outline">
             <Download className="w-4 h-4 mr-2" />
             Export CSV
           </Button>
-          <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Add User
-              </Button>
-            </DialogTrigger>
+          {isAdmin && (
+            <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add User
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New User</DialogTitle>
@@ -931,27 +985,29 @@ export default function Admin() {
                 </Button>
               </div>
             </DialogContent>
-          </Dialog>
+            </Dialog>
+          )}
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>CSV Import</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <Input
-              type="file"
-              accept=".csv"
-              onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
-              disabled={isImporting}
-            />
-            <Button onClick={() => csvFile && uploadCSV(csvFile)} disabled={!csvFile || isImporting}>
-              <Upload className="w-4 h-4 mr-2" />
-              {isImporting ? 'Importing...' : 'Import CSV'}
-            </Button>
-          </div>
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>CSV Import</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setCsvFile(e.target.files?.[0] || null)}
+                disabled={isImporting}
+              />
+              <Button onClick={() => csvFile && uploadCSV(csvFile)} disabled={!csvFile || isImporting}>
+                <Upload className="w-4 h-4 mr-2" />
+                {isImporting ? 'Importing...' : 'Import CSV'}
+              </Button>
+            </div>
           
           {isImporting && (
             <div className="mt-4 p-4 bg-muted rounded-lg">
@@ -988,6 +1044,7 @@ export default function Admin() {
           </p>
         </CardContent>
       </Card>
+      )}
 
 
       <Card>
@@ -1092,7 +1149,7 @@ export default function Admin() {
                   <TableHead>Order Number</TableHead>
                   <TableHead>T-Shirt Size</TableHead>
                   <TableHead>Shipping Info</TableHead>
-                  <TableHead>Actions</TableHead>
+                  {isAdmin && <TableHead>Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1179,18 +1236,20 @@ export default function Admin() {
                                   {order.shipping_carrier || 'No carrier'}
                                 </div>
                                 <div className="flex gap-1 mt-1">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setEditingShipping({
-                                      orderId: order.id,
-                                      tracking: order.tracking_number || '',
-                                      carrier: order.shipping_carrier || ''
-                                    })}
-                                    className="text-xs px-2 py-1 h-6"
-                                  >
-                                    <Edit className="w-3 h-3" />
-                                  </Button>
+                                   {isAdmin && (
+                                     <Button
+                                       size="sm"
+                                       variant="outline"
+                                       onClick={() => setEditingShipping({
+                                         orderId: order.id,
+                                         tracking: order.tracking_number || '',
+                                         carrier: order.shipping_carrier || ''
+                                       })}
+                                       className="text-xs px-2 py-1 h-6"
+                                     >
+                                       <Edit className="w-3 h-3" />
+                                     </Button>
+                                   )}
                                   {order.tracking_number && (
                                     <TooltipProvider>
                                       <Tooltip>
@@ -1218,26 +1277,28 @@ export default function Admin() {
                           '-'
                         )}
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {user.order_submitted && (
-                              <DropdownMenuItem
-                                onClick={() => resetOrderPermission(user.id)}
-                                className="text-amber-600"
-                              >
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                Reset Order Permission
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                       {isAdmin && (
+                         <TableCell>
+                           <DropdownMenu>
+                             <DropdownMenuTrigger asChild>
+                               <Button variant="ghost" className="h-8 w-8 p-0">
+                                 <MoreHorizontal className="h-4 w-4" />
+                               </Button>
+                             </DropdownMenuTrigger>
+                             <DropdownMenuContent align="end">
+                               {user.order_submitted && (
+                                 <DropdownMenuItem
+                                   onClick={() => resetOrderPermission(user.id)}
+                                   className="text-amber-600"
+                                 >
+                                   <RotateCcw className="mr-2 h-4 w-4" />
+                                   Reset Order Permission
+                                 </DropdownMenuItem>
+                               )}
+                             </DropdownMenuContent>
+                           </DropdownMenu>
+                         </TableCell>
+                       )}
                     </TableRow>
                   );
                 })}
