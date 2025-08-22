@@ -10,7 +10,7 @@ import {
 } from 'npm:@react-email/components@0.0.22'
 import * as React from 'npm:react@18.3.1'
 
-interface AdminMagicLinkEmailProps {
+interface ViewOnlyAdminMagicLinkEmailProps {
   supabase_url: string
   email_action_type: string
   redirect_to: string
@@ -18,24 +18,24 @@ interface AdminMagicLinkEmailProps {
   token: string
 }
 
-export const AdminMagicLinkEmail = ({
+export const ViewOnlyAdminMagicLinkEmail = ({
   token,
   supabase_url,
   email_action_type,
   redirect_to,
   token_hash,
-}: AdminMagicLinkEmailProps) => (
+}: ViewOnlyAdminMagicLinkEmailProps) => (
   <Html>
     <Head />
-    <Preview>Full Admin Access - Magic Link Login</Preview>
+    <Preview>View-Only Admin Access - Magic Link Login</Preview>
     <Body style={main}>
       <Container style={container}>
-        <Heading style={h1}>Full Admin Access</Heading>
+        <Heading style={h1}>View-Only Admin Access</Heading>
         <Text style={text}>
-          You have been granted full administrative access to the Alteryx New Hire Store management system.
+          You have been granted view-only access to the Alteryx New Hire Store management system.
         </Text>
         <Text style={text}>
-          <strong>Access Level:</strong> Full management capabilities including order management, inventory updates, user administration, and all system settings.
+          <strong>Access Level:</strong> Read-only access to view orders, inventory, and user data. You cannot modify or delete any information.
         </Text>
         <Link
           href={`${supabase_url}/auth/v1/verify?token=${token_hash}&type=${email_action_type}&redirect_to=${redirect_to}`}
@@ -46,10 +46,10 @@ export const AdminMagicLinkEmail = ({
             marginBottom: '16px',
           }}
         >
-          Click here to access the Full Admin Dashboard
+          Click here to access the View-Only Dashboard
         </Link>
         <Text style={{ ...text, marginBottom: '14px' }}>
-          Or, copy and paste this temporary full admin login code:
+          Or, copy and paste this temporary view-only login code:
         </Text>
         <code style={code}>{token}</code>
         <Text
@@ -60,7 +60,7 @@ export const AdminMagicLinkEmail = ({
             marginBottom: '16px',
           }}
         >
-          If you didn&apos;t request full admin access, you can safely ignore this email.
+          If you didn&apos;t request view-only access, you can safely ignore this email.
         </Text>
         <Text style={footer}>
           <Link
@@ -78,7 +78,7 @@ export const AdminMagicLinkEmail = ({
   </Html>
 )
 
-export default AdminMagicLinkEmail
+export default ViewOnlyAdminMagicLinkEmail
 
 const main = {
   backgroundColor: '#ffffff',

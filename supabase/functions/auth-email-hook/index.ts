@@ -5,6 +5,7 @@ import { renderAsync } from 'npm:@react-email/components@0.0.22'
 import React from 'npm:react@18.3.1'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { AdminMagicLinkEmail } from './_templates/admin-magic-link.tsx'
+import { ViewOnlyAdminMagicLinkEmail } from './_templates/view-only-admin-magic-link.tsx'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
@@ -53,10 +54,10 @@ serve(async (req) => {
 
     console.log('Auth email hook triggered for:', user.email, 'Action:', email_action_type);
 
-    // Check if user is an active admin
+    // Check if user is an active admin and get their role
     const { data: adminUser } = await supabase
       .from('admin_users')
-      .select('email, active')
+      .select('email, active, role')
       .eq('email', user.email)
       .eq('active', true)
       .single();
@@ -111,22 +112,57 @@ serve(async (req) => {
 
     // Send custom admin email for admin logins
     if (isAdminLogin && isActiveAdmin && email_action_type === 'magiclink') {
-      console.log('Sending custom admin magic link email to:', user.email);
+      const adminRole = adminUser?.role;
+      const isFullAdmin = adminRole === 'admin';
+      const isViewOnlyAdmin = adminRole === 'view_only';
       
-      const html = await renderAsync(
-        React.createElement(AdminMagicLinkEmail, {
-          supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
-          token,
-          token_hash,
-          redirect_to,
-          email_action_type,
-        })
-      )
+      console.log('Sending custom admin magic link email to:', user.email, 'Role:', adminRole);
+      
+      let html: string;
+      let subject: string;
+      
+      if (isFullAdmin) {
+        // Full admin template
+        html = await renderAsync(
+          React.createElement(AdminMagicLinkEmail, {
+            supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+            token,
+            token_hash,
+            redirect_to,
+            email_action_type,
+          })
+        );
+        subject = 'Full Admin Access - Magic Link';
+      } else if (isViewOnlyAdmin) {
+        // View-only admin template
+        html = await renderAsync(
+          React.createElement(ViewOnlyAdminMagicLinkEmail, {
+            supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+            token,
+            token_hash,
+            redirect_to,
+            email_action_type,
+          })
+        );
+        subject = 'View-Only Admin Access - Magic Link';
+      } else {
+        // Fallback to full admin template if role is unclear
+        html = await renderAsync(
+          React.createElement(AdminMagicLinkEmail, {
+            supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+            token,
+            token_hash,
+            redirect_to,
+            email_action_type,
+          })
+        );
+        subject = 'Admin Access - Magic Link';
+      }
 
       const { error } = await resend.emails.send({
         from: 'admin@whitestonebranding.com',
         to: [user.email],
-        subject: 'Admin Access - Magic Link',
+        subject,
         html,
       })
       
@@ -135,9 +171,9 @@ serve(async (req) => {
         throw error
       }
       
-      console.log('Admin magic link sent successfully to:', user.email);
+      console.log(`${adminRole} admin magic link sent successfully to:`, user.email);
       
-      return new Response(JSON.stringify({ message: 'Admin email sent' }), {
+      return new Response(JSON.stringify({ message: 'Admin email sent', role: adminRole }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
