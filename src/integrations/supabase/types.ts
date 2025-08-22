@@ -16,28 +16,28 @@ export type Database = {
     Tables: {
       admin_users: {
         Row: {
-          active: boolean
-          created_at: string
-          created_by: string | null
+          auth_user_id: string | null
+          created_at: string | null
           email: string
+          full_name: string
           id: string
-          user_id: string | null
+          role: string | null
         }
         Insert: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
+          auth_user_id?: string | null
+          created_at?: string | null
           email: string
+          full_name: string
           id?: string
-          user_id?: string | null
+          role?: string | null
         }
         Update: {
-          active?: boolean
-          created_at?: string
-          created_by?: string | null
+          auth_user_id?: string | null
+          created_at?: string | null
           email?: string
+          full_name?: string
           id?: string
-          user_id?: string | null
+          role?: string | null
         }
         Relationships: []
       }
@@ -45,53 +45,47 @@ export type Database = {
         Row: {
           name: string
           product_id: string
-          quantity_available: number
+          quantity_available: number | null
           sku: string
         }
         Insert: {
           name: string
           product_id?: string
-          quantity_available?: number
+          quantity_available?: number | null
           sku: string
         }
         Update: {
           name?: string
           product_id?: string
-          quantity_available?: number
+          quantity_available?: number | null
           sku?: string
         }
         Relationships: []
       }
       orders: {
         Row: {
-          date_submitted: string
+          date_submitted: string | null
           id: string
-          order_number: string | null
-          shipping_carrier: string | null
           status: string | null
           tee_size: string | null
           tracking_number: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          date_submitted?: string
+          date_submitted?: string | null
           id?: string
-          order_number?: string | null
-          shipping_carrier?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          date_submitted?: string
+          date_submitted?: string | null
           id?: string
-          order_number?: string | null
-          shipping_carrier?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -103,90 +97,113 @@ export type Database = {
           },
         ]
       }
+      secure_readonly_admins: {
+        Row: {
+          active: boolean
+          allowed_ip_ranges: Json | null
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+          last_login: string | null
+          login_attempts: number | null
+          security_clearance_level: string | null
+        }
+        Insert: {
+          active?: boolean
+          allowed_ip_ranges?: Json | null
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+          last_login?: string | null
+          login_attempts?: number | null
+          security_clearance_level?: string | null
+        }
+        Update: {
+          active?: boolean
+          allowed_ip_ranges?: Json | null
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+          last_login?: string | null
+          login_attempts?: number | null
+          security_clearance_level?: string | null
+        }
+        Relationships: []
+      }
       security_events: {
         Row: {
-          additional_context: Json | null
-          created_at: string
+          additional_context: string | null
+          created_at: string | null
           event_type: string
           id: string
-          ip_address: string | null
           metadata: Json | null
-          session_id: string | null
-          severity:
-            | Database["public"]["Enums"]["security_event_severity"]
-            | null
-          user_agent: string | null
-          user_email: string | null
           user_id: string | null
         }
         Insert: {
-          additional_context?: Json | null
-          created_at?: string
+          additional_context?: string | null
+          created_at?: string | null
           event_type: string
           id?: string
-          ip_address?: string | null
           metadata?: Json | null
-          session_id?: string | null
-          severity?:
-            | Database["public"]["Enums"]["security_event_severity"]
-            | null
-          user_agent?: string | null
-          user_email?: string | null
           user_id?: string | null
         }
         Update: {
-          additional_context?: Json | null
-          created_at?: string
+          additional_context?: string | null
+          created_at?: string | null
           event_type?: string
           id?: string
-          ip_address?: string | null
           metadata?: Json | null
-          session_id?: string | null
-          severity?:
-            | Database["public"]["Enums"]["security_event_severity"]
-            | null
-          user_agent?: string | null
-          user_email?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "security_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {
           auth_user_id: string | null
-          created_at: string
+          created_at: string | null
           email: string
           first_name: string | null
-          full_name: string | null
+          full_name: string
           id: string
-          invited: boolean
+          invited: boolean | null
           last_name: string | null
-          order_submitted: boolean
-          shipping_address: Json | null
+          order_submitted: boolean | null
+          shipping_address: Json
         }
         Insert: {
           auth_user_id?: string | null
-          created_at?: string
+          created_at?: string | null
           email: string
           first_name?: string | null
-          full_name?: string | null
+          full_name: string
           id?: string
-          invited?: boolean
+          invited?: boolean | null
           last_name?: string | null
-          order_submitted?: boolean
-          shipping_address?: Json | null
+          order_submitted?: boolean | null
+          shipping_address?: Json
         }
         Update: {
           auth_user_id?: string | null
-          created_at?: string
+          created_at?: string | null
           email?: string
           first_name?: string | null
-          full_name?: string | null
+          full_name?: string
           id?: string
-          invited?: boolean
+          invited?: boolean | null
           last_name?: string | null
-          order_submitted?: boolean
-          shipping_address?: Json | null
+          order_submitted?: boolean | null
+          shipping_address?: Json
         }
         Relationships: []
       }
@@ -195,6 +212,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      authenticate_secure_readonly_admin: {
+        Args: { admin_email: string }
+        Returns: Json
+      }
       check_suspicious_activity: {
         Args: {
           event_type_param: string
@@ -215,6 +236,10 @@ export type Database = {
           deleted_id: string
         }[]
       }
+      create_secure_readonly_admin: {
+        Args: { admin_email: string; created_by_email?: string }
+        Returns: Json
+      }
       create_user_from_webhook: {
         Args:
           | {
@@ -233,7 +258,7 @@ export type Database = {
             }
           | {
               user_email: string
-              user_full_name?: string
+              user_full_name: string
               user_shipping_address?: Json
             }
         Returns: Json
@@ -268,6 +293,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_secure_readonly_admin: {
+        Args: { admin_email?: string }
+        Returns: boolean
+      }
       is_system_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -279,6 +308,13 @@ export type Database = {
       link_existing_auth_users: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      list_all_views: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          view_definition: string
+          view_name: string
+        }[]
       }
       log_detailed_security_event: {
         Args: {
@@ -292,7 +328,11 @@ export type Database = {
         Returns: undefined
       }
       log_security_event: {
-        Args: { event_type: string; metadata?: Json; user_id?: string }
+        Args: {
+          event_type_param: string
+          metadata_param?: Json
+          user_id_param?: string
+        }
         Returns: undefined
       }
       nuclear_reset_all_data: {
@@ -300,7 +340,10 @@ export type Database = {
         Returns: Json
       }
       place_order: {
-        Args: Record<PropertyKey, never> | { tee_size_param?: string }
+        Args:
+          | Record<PropertyKey, never>
+          | { tee_size_param?: string }
+          | { tee_size_param?: string; user_uuid: string }
         Returns: string
       }
       validate_and_sanitize_input: {

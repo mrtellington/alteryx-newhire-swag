@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 
 const isAllowedEmail = (email: string) => {
   const emailTrimmed = email.trim().toLowerCase();
-  return emailTrimmed === 'tod.ellington@gmail.com' || /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
+  return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
 };
 
 const Index = () => {

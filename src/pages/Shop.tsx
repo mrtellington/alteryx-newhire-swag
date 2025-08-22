@@ -11,7 +11,7 @@ import { useSessionSecurity } from "@/hooks/useSessionSecurity";
 
 const isAllowedEmail = (email: string) => {
   const emailTrimmed = email.trim().toLowerCase();
-  return emailTrimmed === 'tod.ellington@gmail.com' || /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
+  return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
 };
 
 export default function Shop() {

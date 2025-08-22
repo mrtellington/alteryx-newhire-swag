@@ -224,7 +224,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Validate email domain
     const emailDomain = email.split('@')[1]?.toLowerCase();
-    if (!['alteryx.com', 'whitestonebranding.com'].includes(emailDomain) && email !== 'tod.ellington@gmail.com') {
+    if (!['alteryx.com', 'whitestonebranding.com'].includes(emailDomain)) {
       // Log security event for invalid domain
       await supabase.rpc('log_security_event', {
         event_type: 'webhook_invalid_domain',

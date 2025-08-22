@@ -181,8 +181,7 @@ export function sanitizeInput(input: string): string {
 // Email domain validation
 export function isAllowedEmailDomain(email: string): boolean {
   const emailTrimmed = email.trim().toLowerCase();
-  return emailTrimmed === 'tod.ellington@gmail.com' || 
-         /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
+  return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
 }
 
 // Admin email validation
