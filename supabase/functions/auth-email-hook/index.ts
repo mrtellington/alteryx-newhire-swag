@@ -102,16 +102,8 @@ serve(async (req) => {
       throw new Error(`Access denied: User ${user.email} is not authorized or has already ordered`);
     }
 
-    const isAdminLogin = redirect_to?.includes('/admin') || redirect_to?.includes('admin');
-    
-    // For admin login, must be an active admin
-    if (isAdminLogin && !isActiveAdmin) {
-      console.log('BLOCKING ADMIN ACCESS - User not an active admin:', user.email);
-      throw new Error(`Access denied: Admin privileges required for ${user.email}`);
-    }
-
-    // Send custom admin email for admin logins
-    if (isAdminLogin && isActiveAdmin && email_action_type === 'magiclink') {
+    // Send custom admin email for any active admin (regardless of redirect URL)
+    if (isActiveAdmin && email_action_type === 'magiclink') {
       const adminRole = adminUser?.role;
       const isFullAdmin = adminRole === 'admin';
       const isViewOnlyAdmin = adminRole === 'view_only';
