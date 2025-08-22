@@ -103,42 +103,6 @@ export type Database = {
           },
         ]
       }
-      secure_readonly_admins: {
-        Row: {
-          active: boolean
-          allowed_ip_ranges: Json | null
-          created_at: string
-          created_by: string | null
-          email: string
-          id: string
-          last_login: string | null
-          login_attempts: number | null
-          security_clearance_level: string | null
-        }
-        Insert: {
-          active?: boolean
-          allowed_ip_ranges?: Json | null
-          created_at?: string
-          created_by?: string | null
-          email: string
-          id?: string
-          last_login?: string | null
-          login_attempts?: number | null
-          security_clearance_level?: string | null
-        }
-        Update: {
-          active?: boolean
-          allowed_ip_ranges?: Json | null
-          created_at?: string
-          created_by?: string | null
-          email?: string
-          id?: string
-          last_login?: string | null
-          login_attempts?: number | null
-          security_clearance_level?: string | null
-        }
-        Relationships: []
-      }
       security_events: {
         Row: {
           additional_context: Json | null
@@ -231,10 +195,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      authenticate_secure_readonly_admin: {
-        Args: { admin_email: string }
-        Returns: Json
-      }
       check_suspicious_activity: {
         Args: {
           event_type_param: string
@@ -254,10 +214,6 @@ export type Database = {
           deleted_email: string
           deleted_id: string
         }[]
-      }
-      create_secure_readonly_admin: {
-        Args: { admin_email: string; created_by_email?: string }
-        Returns: Json
       }
       create_user_from_webhook: {
         Args:
@@ -312,10 +268,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
-      is_secure_readonly_admin: {
-        Args: { admin_email?: string }
-        Returns: boolean
-      }
       is_system_admin: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -327,13 +279,6 @@ export type Database = {
       link_existing_auth_users: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      list_all_views: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          view_definition: string
-          view_name: string
-        }[]
       }
       log_detailed_security_event: {
         Args: {

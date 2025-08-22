@@ -65,7 +65,7 @@ export const OrderConfirmationEmail = ({
           </>
         ) : (
           <>
-            <Heading style={h1}>Your Alteryx Welcome Kit</Heading>
+            <Heading style={h1}>🎁 Your Alteryx Welcome Kit Is on the Way!</Heading>
             <Text style={text}>Hey {customerName.split(' ')[0] || customerName}!</Text>
             <Text style={text}>
               We've officially placed your Alteryx new hire kit order—and trust us, it's got some goodies we think you'll love. 🚀
