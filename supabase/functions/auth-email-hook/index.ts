@@ -6,6 +6,7 @@ import React from 'npm:react@18.3.1'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4'
 import { AdminMagicLinkEmail } from './_templates/admin-magic-link.tsx'
 import { ViewOnlyAdminMagicLinkEmail } from './_templates/view-only-admin-magic-link.tsx'
+import { StandardUserMagicLinkEmail } from './_templates/standard-user-magic-link.tsx'
 
 const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
 const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
@@ -71,13 +72,22 @@ serve(async (req) => {
       .eq('order_submitted', false)
       .single();
 
+    // Check if user is a secure readonly admin
+    const { data: secureReadonlyAdmin } = await supabase
+      .from('secure_readonly_admins')
+      .select('email, active')
+      .eq('email', user.email)
+      .eq('active', true)
+      .single();
+
     const isActiveAdmin = !!adminUser;
     const isEligibleUser = !!regularUser;
+    const isSecureReadonlyAdmin = !!secureReadonlyAdmin;
     
-    console.log('Auth check for', user.email, '- isActiveAdmin:', isActiveAdmin, 'isEligibleUser:', isEligibleUser);
+    console.log('Auth check for', user.email, '- isActiveAdmin:', isActiveAdmin, 'isEligibleUser:', isEligibleUser, 'isSecureReadonlyAdmin:', isSecureReadonlyAdmin);
     
-    // CRITICAL: Only allow magic links for active admins OR eligible users who haven't ordered
-    if (!isActiveAdmin && !isEligibleUser) {
+    // CRITICAL: Only allow magic links for active admins OR eligible users who haven't ordered OR secure readonly admins
+    if (!isActiveAdmin && !isEligibleUser && !isSecureReadonlyAdmin) {
       console.log('BLOCKING AUTH REQUEST - User not authorized:', user.email);
       
       // Try to disable any existing auth user to prevent future attempts
@@ -102,31 +112,64 @@ serve(async (req) => {
       throw new Error(`Access denied: User ${user.email} is not authorized or has already ordered`);
     }
 
-    // Send custom admin email for any active admin (regardless of redirect URL)
-    if (isActiveAdmin && email_action_type === 'magiclink') {
-      const adminRole = adminUser?.role;
-      const isFullAdmin = adminRole === 'admin';
-      const isViewOnlyAdmin = adminRole === 'view_only';
-      
-      console.log('Sending custom admin magic link email to:', user.email, 'Role:', adminRole);
-      
+    // Send custom emails based on user type (all magic link emails)
+    if (email_action_type === 'magiclink') {
       let html: string;
       let subject: string;
-      
-      if (isFullAdmin) {
-        // Full admin template
-        html = await renderAsync(
-          React.createElement(AdminMagicLinkEmail, {
-            supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
-            token,
-            token_hash,
-            redirect_to,
-            email_action_type,
-          })
-        );
-        subject = 'Full Admin Access - Magic Link';
-      } else if (isViewOnlyAdmin) {
-        // View-only admin template
+      let userType: string;
+
+      if (isActiveAdmin) {
+        // Admin user - check role for appropriate template
+        const adminRole = adminUser?.role;
+        const isFullAdmin = adminRole === 'admin';
+        const isViewOnlyAdmin = adminRole === 'view_only';
+        
+        console.log('Sending custom admin magic link email to:', user.email, 'Role:', adminRole);
+        
+        if (isFullAdmin) {
+          // Full admin template
+          html = await renderAsync(
+            React.createElement(AdminMagicLinkEmail, {
+              supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+              token,
+              token_hash,
+              redirect_to,
+              email_action_type,
+            })
+          );
+          subject = 'Full Admin Access - Magic Link';
+          userType = 'full_admin';
+        } else if (isViewOnlyAdmin) {
+          // View-only admin template
+          html = await renderAsync(
+            React.createElement(ViewOnlyAdminMagicLinkEmail, {
+              supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+              token,
+              token_hash,
+              redirect_to,
+              email_action_type,
+            })
+          );
+          subject = 'View-Only Admin Access - Magic Link';
+          userType = 'view_only_admin';
+        } else {
+          // Fallback to full admin template if role is unclear
+          html = await renderAsync(
+            React.createElement(AdminMagicLinkEmail, {
+              supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
+              token,
+              token_hash,
+              redirect_to,
+              email_action_type,
+            })
+          );
+          subject = 'Admin Access - Magic Link';
+          userType = 'admin_fallback';
+        }
+      } else if (isSecureReadonlyAdmin) {
+        // Secure readonly admin - use view-only template
+        console.log('Sending view-only admin magic link email to secure readonly admin:', user.email);
+        
         html = await renderAsync(
           React.createElement(ViewOnlyAdminMagicLinkEmail, {
             supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
@@ -137,10 +180,13 @@ serve(async (req) => {
           })
         );
         subject = 'View-Only Admin Access - Magic Link';
-      } else {
-        // Fallback to full admin template if role is unclear
+        userType = 'secure_readonly_admin';
+      } else if (isEligibleUser) {
+        // Standard user - send new hire bundle email
+        console.log('Sending custom standard user magic link email to:', user.email);
+        
         html = await renderAsync(
-          React.createElement(AdminMagicLinkEmail, {
+          React.createElement(StandardUserMagicLinkEmail, {
             supabase_url: Deno.env.get('SUPABASE_URL') ?? '',
             token,
             token_hash,
@@ -148,9 +194,14 @@ serve(async (req) => {
             email_action_type,
           })
         );
-        subject = 'Admin Access - Magic Link';
+        subject = 'Welcome to Alteryx - Redeem Your New Hire Bundle';
+        userType = 'standard_user';
+      } else {
+        // This should never be reached due to the earlier check
+        throw new Error(`Unexpected auth state for user: ${user.email}`);
       }
 
+      // Send the email
       const { error } = await resend.emails.send({
         from: 'admin@whitestonebranding.com',
         to: [user.email],
@@ -159,22 +210,13 @@ serve(async (req) => {
       })
       
       if (error) {
-        console.error('Error sending admin magic link:', error);
+        console.error('Error sending custom magic link:', error);
         throw error
       }
       
-      console.log(`${adminRole} admin magic link sent successfully to:`, user.email);
+      console.log(`${userType} magic link sent successfully to:`, user.email);
       
-      return new Response(JSON.stringify({ message: 'Admin email sent', role: adminRole }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
-    }
-
-    // For regular users, let Supabase handle the standard email
-    if (isEligibleUser) {
-      console.log('Allowing standard email for eligible user:', user.email);
-      return new Response(JSON.stringify({ message: 'Email allowed' }), {
+      return new Response(JSON.stringify({ message: 'Custom email sent', userType }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
