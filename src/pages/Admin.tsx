@@ -593,7 +593,31 @@ export default function Admin() {
           const currentIndex = batchIndex * batchSize + userIndex;
           
           try {
-            const [email, firstName, lastName, address, city, state, zip, phone] = line.split(',').map(field => field.trim().replace(/"/g, ''));
+            // Parse CSV line - handle both old format (8 fields) and new format (5 fields)
+            const fields = line.split(',').map(field => field.trim().replace(/"/g, ''));
+            
+            let email, firstName, lastName, orderNumber, submittedDate;
+            let shippingAddress = null;
+            
+            if (fields.length >= 8) {
+              // Old format: email, firstName, lastName, address, city, state, zip, phone
+              [email, firstName, lastName] = fields;
+              const [, , , address, city, state, zip, phone] = fields;
+              shippingAddress = address || city || state || zip || phone ? {
+                address: address || '',
+                city: city || '',
+                state: state || '',
+                zip: zip || '',
+                phone: phone || ''
+              } : null;
+            } else if (fields.length >= 3) {
+              // New format: firstName, lastName, email, orderNumber, submittedDate
+              [firstName, lastName, email, orderNumber, submittedDate] = fields;
+            } else {
+              errors.push(`Row ${currentIndex + 2}: Invalid format - need at least 3 fields (firstName, lastName, email)`);
+              errorCount++;
+              continue;
+            }
             
             if (!email || !firstName || !lastName) {
               errors.push(`Row ${currentIndex + 2}: Missing required fields (email, first name, or last name)`);
@@ -604,17 +628,10 @@ export default function Admin() {
             setImportProgress({ 
               current: currentIndex + 1, 
               total: dataLines.length, 
-              currentUser: `${firstName} ${lastName} (${email})` 
+              currentUser: `${firstName} ${lastName} (${email})${orderNumber ? ` - Order: ${orderNumber}` : ''}` 
             });
 
             const fullName = `${firstName} ${lastName}`;
-            const shippingAddress = address || city || state || zip || phone ? {
-              address: address || '',
-              city: city || '',
-              state: state || '',
-              zip: zip || '',
-              phone: phone || ''
-            } : null;
 
             // Increased progressive delay to prevent rate limiting
             const delay = Math.min(2000 + (batchIndex * 750) + (userIndex * 500), 5000);
@@ -636,7 +653,9 @@ export default function Admin() {
                     full_name: fullName,
                     first_name: firstName,
                     last_name: lastName,
-                    shipping_address: shippingAddress
+                    shipping_address: shippingAddress,
+                    order_number: orderNumber || null,
+                    order_date: submittedDate || null
                   }
                 });
 

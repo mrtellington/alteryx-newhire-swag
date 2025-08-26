@@ -271,6 +271,16 @@ export type Database = {
         Args:
           | {
               auth_user_id?: string
+              order_date?: string
+              order_number?: string
+              user_email: string
+              user_first_name?: string
+              user_full_name?: string
+              user_last_name?: string
+              user_shipping_address?: Json
+            }
+          | {
+              auth_user_id?: string
               user_email: string
               user_first_name?: string
               user_full_name?: string

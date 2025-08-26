@@ -35,6 +35,8 @@ interface CognitoFormData {
     zip?: string;
     phone?: string;
   };
+  order_number?: string;
+  order_date?: string;
 }
 
 // Use service role key for admin operations
@@ -222,6 +224,10 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    // Extract order information if provided
+    const orderNumber = formData.order_number?.toString().trim() || null;
+    const orderDate = formData.order_date?.toString().trim() || null;
+
     // Validate email domain
     const emailDomain = email.split('@')[1]?.toLowerCase();
     if (!['alteryx.com', 'whitestonebranding.com'].includes(emailDomain)) {
@@ -286,7 +292,9 @@ const handler = async (req: Request): Promise<Response> => {
       user_first_name: parsedFirstName,
       user_last_name: parsedLastName,
       user_shipping_address: shippingAddress,
-      auth_user_id: null
+      auth_user_id: null,
+      order_number: orderNumber,
+      order_date: orderDate
     });
 
     // Create or update user record using RPC function
@@ -297,7 +305,9 @@ const handler = async (req: Request): Promise<Response> => {
         user_first_name: parsedFirstName || null,
         user_last_name: parsedLastName || null,
         user_shipping_address: shippingAddress,
-        auth_user_id: null
+        auth_user_id: null,
+        order_number: orderNumber,
+        order_date: orderDate
       });
     
     console.log('RPC result:', result);
