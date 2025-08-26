@@ -119,7 +119,7 @@ serve(async (req) => {
       let userType: string;
 
       if (isActiveAdmin) {
-        // Admin user - check role for appropriate template
+        // Admin user - check role for appropriate template (HIGHEST PRIORITY)
         const adminRole = adminUser?.role;
         const isFullAdmin = adminRole === 'admin';
         const isViewOnlyAdmin = adminRole === 'view_only';
@@ -167,7 +167,7 @@ serve(async (req) => {
           userType = 'admin_fallback';
         }
       } else if (isSecureReadonlyAdmin) {
-        // Secure readonly admin - use view-only template
+        // Secure readonly admin - use view-only template (SECOND PRIORITY)
         console.log('Sending view-only admin magic link email to secure readonly admin:', user.email);
         
         html = await renderAsync(
@@ -182,7 +182,7 @@ serve(async (req) => {
         subject = 'View-Only Admin Access - Magic Link';
         userType = 'secure_readonly_admin';
       } else if (isEligibleUser) {
-        // Standard user - send new hire bundle email
+        // Standard user - send new hire bundle email (LOWEST PRIORITY)
         console.log('Sending custom standard user magic link email to:', user.email);
         
         html = await renderAsync(
