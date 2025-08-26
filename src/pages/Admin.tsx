@@ -1073,7 +1073,7 @@ export default function Admin() {
             <p className="text-sm text-muted-foreground">
               ✅ Enhanced rate limiting protection prevents auth creation failures
             </p>
-            {isAdmin && (
+            {false && isAdmin && (
               <div className="pt-4 border-t border-destructive/20">
                 <div className="flex items-center justify-between">
                   <div>
