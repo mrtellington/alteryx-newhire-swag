@@ -84,6 +84,18 @@ serve(async (req) => {
     const isEligibleUser = !!regularUser;
     const isSecureReadonlyAdmin = !!secureReadonlyAdmin;
     
+    // DEBUG: Log all the values to help diagnose the routing issue
+    console.log('=== EMAIL ROUTING DEBUG ===');
+    console.log('Email being processed:', user.email);
+    console.log('adminUser query result:', adminUser);
+    console.log('regularUser query result:', regularUser);
+    console.log('secureReadonlyAdmin query result:', secureReadonlyAdmin);
+    console.log('isActiveAdmin:', isActiveAdmin);
+    console.log('isSecureReadonlyAdmin:', isSecureReadonlyAdmin);
+    console.log('isEligibleUser:', isEligibleUser);
+    console.log('email_action_type:', email_action_type);
+    console.log('=== END DEBUG ===');
+    
     console.log('Auth check for', user.email, '- isActiveAdmin:', isActiveAdmin, 'isEligibleUser:', isEligibleUser, 'isSecureReadonlyAdmin:', isSecureReadonlyAdmin);
     
     // CRITICAL: Only allow magic links for active admins OR eligible users who haven't ordered OR secure readonly admins
