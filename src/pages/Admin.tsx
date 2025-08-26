@@ -1064,9 +1064,18 @@ export default function Admin() {
           )}
           
           <p className="text-sm text-muted-foreground mt-2">
-            Flexible column mapping supports various name formats (e.g., first_name/firstname/fname, last_name/lastname/surname, email/email_address)
+            <strong>Supported CSV formats:</strong>
           </p>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
+            • <strong>New users:</strong> firstName,lastName,email,orderNumber,submittedDate
+          </p>
+          <p className="text-xs text-muted-foreground">
+            • <strong>Legacy format:</strong> email,firstName,lastName,address,city,state,zip,phone
+          </p>
+          <p className="text-xs text-muted-foreground">
+            • If orderNumber and submittedDate are provided, user will be marked as having ordered
+          </p>
+          <p className="text-sm text-muted-foreground mt-1">
             ⚡ Enhanced with progressive delays and retry logic to prevent rate limiting issues
           </p>
         </CardContent>
