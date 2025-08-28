@@ -8,13 +8,30 @@ import { AdminMagicLinkEmail } from './_templates/admin-magic-link.tsx'
 import { ViewOnlyAdminMagicLinkEmail } from './_templates/view-only-admin-magic-link.tsx'
 import { StandardUserMagicLinkEmail } from './_templates/standard-user-magic-link.tsx'
 
-const resend = new Resend(Deno.env.get('RESEND_API_KEY') as string)
-const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET') as string
+// Environment variables with validation
+const resendApiKey = Deno.env.get('RESEND_API_KEY')
+const hookSecret = Deno.env.get('AUTH_EMAIL_HOOK_SECRET')
+const supabaseUrl = Deno.env.get('SUPABASE_URL')
+const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-// Initialize Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Validate environment variables
+const hasRequiredEnvVars = !!(resendApiKey && hookSecret && supabaseUrl && supabaseServiceKey)
+const envDebugInfo = {
+  hasResendApiKey: !!resendApiKey,
+  hasHookSecret: !!hookSecret,
+  hasSupabaseUrl: !!supabaseUrl,
+  hasSupabaseServiceKey: !!supabaseServiceKey
+}
+
+console.log('Environment variables status:', envDebugInfo)
+
+if (!hasRequiredEnvVars) {
+  console.error('Missing environment variables:', envDebugInfo)
+}
+
+// Initialize services only if env vars are available
+const resend = resendApiKey ? new Resend(resendApiKey) : null
+const supabase = (supabaseUrl && supabaseServiceKey) ? createClient(supabaseUrl, supabaseServiceKey) : null
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,29 +48,52 @@ serve(async (req) => {
   }
 
   try {
-    const payload = await req.text()
-    const headers = Object.fromEntries(req.headers)
-    const wh = new Webhook(hookSecret)
-    
-    const {
-      user,
-      email_data: { token, token_hash, redirect_to, email_action_type },
-    } = wh.verify(payload, headers) as {
-      user: {
-        email: string
-      }
-      email_data: {
-        token: string
-        token_hash: string
-        redirect_to: string
-        email_action_type: string
-        site_url: string
-        token_new: string
-        token_hash_new: string
-      }
+    // Early return with success if required environment variables are missing
+    // This allows Supabase's default email functionality to work as fallback
+    if (!hasRequiredEnvVars) {
+      console.error('Missing required environment variables')
+      throw new Error('Missing required environment variables')
     }
 
+    const payload = await req.text()
+    const headers = Object.fromEntries(req.headers)
+    
+    console.log('Received webhook payload length:', payload.length)
+    console.log('Headers:', Array.from(req.headers.keys()))
+    
+    // Validate webhook with proper error handling
+    if (!hookSecret) {
+      throw new Error('AUTH_EMAIL_HOOK_SECRET not configured')
+    }
+    
+    let webhookData
+    try {
+      const wh = new Webhook(hookSecret)
+      webhookData = wh.verify(payload, headers) as {
+        user: { email: string }
+        email_data: {
+          token: string
+          token_hash: string
+          redirect_to: string
+          email_action_type: string
+          site_url: string
+          token_new: string
+          token_hash_new: string
+        }
+      }
+    } catch (webhookError) {
+      console.log('Webhook verification failed:', webhookError)
+      throw new Error('Invalid webhook signature')
+    }
+    
+    const { user, email_data: { token, token_hash, redirect_to, email_action_type } } = webhookData
+
     console.log('Auth email hook triggered for:', user.email, 'Action:', email_action_type);
+
+    // Validate required services are available
+    if (!supabase || !resend) {
+      throw new Error('Required services not available - missing environment variables')
+    }
 
     // Check if user is an active admin and get their role
     const { data: adminUser } = await supabase
