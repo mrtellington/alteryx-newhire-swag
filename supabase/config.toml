@@ -39,3 +39,6 @@ verify_jwt = false
 
 [functions.trigger-cleanup]
 verify_jwt = false
+
+[functions.send-slack-notification]
+verify_jwt = false

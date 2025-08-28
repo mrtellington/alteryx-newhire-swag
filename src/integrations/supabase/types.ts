@@ -357,6 +357,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_slack_on_events: {
+        Args: { event_data?: Json; event_type_param: string }
+        Returns: undefined
+      }
       nuclear_reset_all_data: {
         Args: Record<PropertyKey, never>
         Returns: Json
