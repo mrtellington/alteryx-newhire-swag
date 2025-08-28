@@ -109,42 +109,6 @@ export type Database = {
           },
         ]
       }
-      secure_readonly_admins: {
-        Row: {
-          active: boolean
-          allowed_ip_ranges: Json | null
-          created_at: string
-          created_by: string | null
-          email: string
-          id: string
-          last_login: string | null
-          login_attempts: number | null
-          security_clearance_level: string | null
-        }
-        Insert: {
-          active?: boolean
-          allowed_ip_ranges?: Json | null
-          created_at?: string
-          created_by?: string | null
-          email: string
-          id?: string
-          last_login?: string | null
-          login_attempts?: number | null
-          security_clearance_level?: string | null
-        }
-        Update: {
-          active?: boolean
-          allowed_ip_ranges?: Json | null
-          created_at?: string
-          created_by?: string | null
-          email?: string
-          id?: string
-          last_login?: string | null
-          login_attempts?: number | null
-          security_clearance_level?: string | null
-        }
-        Relationships: []
-      }
       security_events: {
         Row: {
           additional_context: string | null
