@@ -56,13 +56,23 @@ const Auth = () => {
     // Redirect if already logged in and check order status
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session) {
+        await logSecurityEvent('auth_session_detected', { 
+          user_id: session.user.id,
+          email: session.user.email 
+        });
+        
         // Check if user has already placed an order
         try {
           const { data: users } = await supabase
             .from("users")
             .select("order_submitted")
-            .eq("id", session.user.id)
+            .eq("auth_user_id", session.user.id)
             .single();
+          
+          await logSecurityEvent('auth_user_lookup_success', { 
+            user_id: session.user.id,
+            order_submitted: users?.order_submitted 
+          });
           
           if (users?.order_submitted) {
             navigate("/thank-you", { replace: true });
@@ -70,28 +80,10 @@ const Auth = () => {
             navigate("/shop", { replace: true });
           }
         } catch (error) {
-          console.error("Error checking user order status:", error);
-          navigate("/shop", { replace: true });
-        }
-      }
-    });
-    
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        // Check if user has already placed an order
-        try {
-          const { data: users } = await supabase
-            .from("users")
-            .select("order_submitted")
-            .eq("id", session.user.id)
-            .single();
-          
-          if (users?.order_submitted) {
-            navigate("/thank-you", { replace: true });
-          } else {
-            navigate("/shop", { replace: true });
-          }
-        } catch (error) {
+          await logSecurityEvent('auth_user_lookup_failed', { 
+            user_id: session.user.id,
+            error: error.message 
+          });
           console.error("Error checking user order status:", error);
           navigate("/shop", { replace: true });
         }
