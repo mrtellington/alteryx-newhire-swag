@@ -13,28 +13,37 @@ interface Database {
         Row: {
           id: string
           email: string
-          full_name: string
           auth_user_id: string | null
           invited: boolean
           order_submitted: boolean
+          full_name: string | null
+          first_name: string | null
+          last_name: string | null
+          shipping_address: Record<string, any>
           created_at: string
         }
         Insert: {
           id?: string
           email: string
-          full_name: string
           auth_user_id?: string | null
           invited?: boolean
           order_submitted?: boolean
+          full_name?: string | null
+          first_name?: string | null
+          last_name?: string | null
+          shipping_address?: Record<string, any>
           created_at?: string
         }
         Update: {
           id?: string
           email?: string
-          full_name?: string
           auth_user_id?: string | null
           invited?: boolean
           order_submitted?: boolean
+          full_name?: string | null
+          first_name?: string | null
+          last_name?: string | null
+          shipping_address?: Record<string, any>
           created_at?: string
         }
       }
@@ -42,25 +51,28 @@ interface Database {
         Row: {
           id: string
           event_type: string
+          user_id: string | null
           user_email: string | null
-          metadata: any
-          severity: string
+          metadata: Record<string, any> | null
+          severity: 'low' | 'medium' | 'high' | 'critical'
           created_at: string
         }
         Insert: {
           id?: string
           event_type: string
+          user_id?: string | null
           user_email?: string | null
-          metadata?: any
-          severity?: string
+          metadata?: Record<string, any> | null
+          severity?: 'low' | 'medium' | 'high' | 'critical'
           created_at?: string
         }
         Update: {
           id?: string
           event_type?: string
+          user_id?: string | null
           user_email?: string | null
-          metadata?: any
-          severity?: string
+          metadata?: Record<string, any> | null
+          severity?: 'low' | 'medium' | 'high' | 'critical'
           created_at?: string
         }
       }
@@ -68,274 +80,442 @@ interface Database {
   }
 }
 
+// Helper function to validate email domain
+const isValidEmailDomain = (email: string): boolean => {
+  const lowerEmail = email.toLowerCase();
+  return lowerEmail.endsWith('@alteryx.com') || lowerEmail.endsWith('@whitestonebranding.com');
+}
+
+// Helper function to generate secure password
+const generateSecurePassword = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Helper function to add delay between operations
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 serve(async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+  const supabase = createClient<Database>(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    {
       auth: {
         autoRefreshToken: false,
         persistSession: false
       }
-    });
+    }
+  )
 
-    console.log('🔍 Starting auth user linking process...');
-
-    // Get request body to check if we're processing specific users
-    const body = await req.json().catch(() => ({}));
-    const targetEmails = body.emails || [];
+  try {
+    console.log('🚀 Enhanced auth user linking process started...');
     
-    // Get users without auth_user_id
+    // Get request body to check for specific emails and test mode
+    let specificEmails: string[] | null = null;
+    let testMode = false;
+    try {
+      const body = await req.json();
+      specificEmails = body?.emails || null;
+      testMode = body?.testMode || false;
+      console.log('📧 Specific emails requested:', specificEmails);
+      console.log('🧪 Test mode:', testMode);
+    } catch {
+      console.log('📧 Processing all users without auth accounts');
+    }
+
+    // Get users who need auth accounts
     let query = supabase
       .from('users')
-      .select('id, email, full_name, auth_user_id, invited, order_submitted')
+      .select('id, email, full_name, first_name, last_name, order_submitted')
       .eq('invited', true)
       .is('auth_user_id', null);
     
-    if (targetEmails.length > 0) {
-      query = query.in('email', targetEmails);
-    }
-    
-    const { data: usersWithoutAuth, error: fetchError } = await query;
-    
-    if (fetchError) {
-      console.error('❌ Error fetching users:', fetchError);
-      throw fetchError;
+    if (specificEmails && specificEmails.length > 0) {
+      query = query.in('email', specificEmails);
     }
 
-    console.log(`📊 Found ${usersWithoutAuth?.length || 0} users without auth accounts`);
+    const { data: users, error: usersError } = await query.order('email');
 
-    if (!usersWithoutAuth || usersWithoutAuth.length === 0) {
+    if (usersError) {
+      console.error('❌ Error fetching users:', usersError);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch users', details: usersError.message }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    if (!users || users.length === 0) {
+      console.log('✅ No users need auth account linking');
       return new Response(
         JSON.stringify({
           success: true,
           processed: 0,
           successful: 0,
           errors: 0,
-          results: [],
-          message: 'No users need auth linking'
+          message: 'No users need auth account linking',
+          results: []
         }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
       );
     }
 
-    const results: any[] = [];
-    let successfulLinks = 0;
-    let errors = 0;
-
-    // Process users in batches to avoid rate limits
-    const batchSize = 5;
-    const batches = [];
-    for (let i = 0; i < usersWithoutAuth.length; i += batchSize) {
-      batches.push(usersWithoutAuth.slice(i, i + batchSize));
+    console.log(`📊 Found ${users.length} users needing auth accounts`);
+    
+    // Safety check for large batches
+    if (!testMode && users.length > 50) {
+      console.log('🛡️  Large batch detected - use test mode for safety');
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'Large batch safety check - use testMode: true for batches over 50 users',
+          processed: 0,
+          successful: 0,
+          errors: 0,
+          results: []
+        }),
+        { 
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
     }
 
-    for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
-      const batch = batches[batchIndex];
-      console.log(`📦 Processing batch ${batchIndex + 1}/${batches.length} (${batch.length} users)`);
-      
+    const results = [];
+    let successful = 0;
+    let errors = 0;
+    const processedEmails = new Set<string>();
+
+    // Log batch start
+    await supabase.from('security_events').insert({
+      event_type: testMode ? 'test_auth_linking_started' : 'batch_auth_linking_started',
+      metadata: {
+        user_count: users.length,
+        specific_emails: specificEmails,
+        test_mode: testMode,
+        timestamp: new Date().toISOString()
+      },
+      severity: 'medium'
+    });
+
+    // Get all existing auth users once to avoid repeated API calls
+    console.log('🔍 Fetching existing auth users...');
+    const { data: allAuthUsers, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error('❌ Error fetching auth users:', listError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Failed to fetch existing auth users', 
+          details: listError.message 
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    console.log(`📊 Found ${allAuthUsers.users.length} existing auth users`);
+    
+    // Create a map for quick lookup
+    const authUserMap = new Map();
+    allAuthUsers.users.forEach(authUser => {
+      if (authUser.email) {
+        authUserMap.set(authUser.email.toLowerCase(), authUser);
+      }
+    });
+
+    // Process users in smaller batches with enhanced error handling
+    const batchSize = testMode ? 3 : 5;
+    for (let i = 0; i < users.length; i += batchSize) {
+      const batch = users.slice(i, i + batchSize);
+      console.log(`🔄 Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(users.length / batchSize)} (${batch.length} users)`);
+
       for (const user of batch) {
-        console.log(`👤 Processing user: ${user.email}`);
-        
         try {
-          // First, try to find existing auth user by email
-          const { data: authUsers, error: listError } = await supabase.auth.admin.listUsers();
-          
-          if (listError) {
-            console.error(`❌ Error listing auth users: ${listError.message}`);
+          // Skip if we already processed this email (duplicate check)
+          if (processedEmails.has(user.email.toLowerCase())) {
+            console.log(`⏭️  Skipping duplicate: ${user.email}`);
+            continue;
+          }
+          processedEmails.add(user.email.toLowerCase());
+
+          console.log(`👤 Processing user: ${user.email} (ordered: ${user.order_submitted})`);
+
+          // Validate email domain
+          if (!isValidEmailDomain(user.email)) {
+            const errorMsg = `Invalid email domain: ${user.email}`;
+            console.log(`   ❌ ${errorMsg}`);
+            
             results.push({
               email: user.email,
               success: false,
-              error: `Failed to list auth users: ${listError.message}`,
-              action: 'list_auth_users_failed'
+              action: 'validation_failed',
+              error: errorMsg
             });
             errors++;
             continue;
           }
 
-          // Find matching auth user by email
-          const existingAuthUser = authUsers.users?.find(authUser => 
-            authUser.email?.toLowerCase() === user.email.toLowerCase()
-          );
+          // Check for existing auth user using our pre-fetched map
+          const existingAuthUser = authUserMap.get(user.email.toLowerCase());
+
+          let authUserId: string;
+          let action: string;
 
           if (existingAuthUser) {
-            console.log(`✅ Found existing auth user for ${user.email}, linking...`);
-            
-            // Link the existing auth user to the database user
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({ auth_user_id: existingAuthUser.id })
-              .eq('id', user.id);
-
-            if (updateError) {
-              console.error(`❌ Failed to link auth user for ${user.email}:`, updateError);
-              results.push({
-                email: user.email,
-                success: false,
-                error: `Failed to update user record: ${updateError.message}`,
-                action: 'link_failed',
-                auth_user_id: existingAuthUser.id
-              });
-              errors++;
-            } else {
-              console.log(`✅ Successfully linked auth user for ${user.email}`);
-              results.push({
-                email: user.email,
-                success: true,
-                action: 'linked_existing_auth_user',
-                auth_user_id: existingAuthUser.id
-              });
-              successfulLinks++;
-
-              // Log security event
-              await supabase.from('security_events').insert({
-                event_type: 'auth_user_linked',
-                user_email: user.email,
-                metadata: {
-                  user_id: user.id,
-                  auth_user_id: existingAuthUser.id,
-                  action: 'linked_existing'
-                },
-                severity: 'low'
-              });
-            }
+            // Link to existing auth user
+            authUserId = existingAuthUser.id;
+            action = 'linked_existing_auth';
+            console.log(`   🔗 Found existing auth user: ${authUserId}`);
           } else {
-            console.log(`⚠️ No existing auth user found for ${user.email}, creating new one...`);
+            // Create new auth user with enhanced metadata
+            const password = generateSecurePassword();
             
-            // Create new auth user since none exists
+            console.log(`   🆕 Creating new auth user...`);
             const { data: newAuthUser, error: createError } = await supabase.auth.admin.createUser({
               email: user.email,
-              email_confirm: true,
+              password: password,
+              email_confirm: true, // Auto-confirm email for seamless magic link experience
               user_metadata: {
                 full_name: user.full_name,
-                invited: true
+                first_name: user.first_name,
+                last_name: user.last_name,
+                created_by: 'auth_linking_function',
+                created_at: new Date().toISOString()
               }
             });
 
             if (createError) {
-              console.error(`❌ Failed to create auth user for ${user.email}:`, createError);
+              console.log(`   ❌ Error creating auth user: ${createError.message}`);
+              
               results.push({
                 email: user.email,
                 success: false,
-                error: createError.message,
-                action: 'create_auth_user_failed'
+                action: 'auth_creation_failed',
+                error: createError.message
               });
               errors++;
-            } else if (newAuthUser.user) {
-              console.log(`✅ Created new auth user for ${user.email}, linking...`);
-              
-              // Link the new auth user to the database user
-              const { error: updateError } = await supabase
-                .from('users')
-                .update({ auth_user_id: newAuthUser.user.id })
-                .eq('id', user.id);
+              continue;
+            }
 
-              if (updateError) {
-                console.error(`❌ Failed to link new auth user for ${user.email}:`, updateError);
-                
-                // Clean up the auth user we just created since linking failed
-                await supabase.auth.admin.deleteUser(newAuthUser.user.id);
+            if (!newAuthUser.user) {
+              console.log(`   ❌ No user returned from auth creation`);
+              
+              results.push({
+                email: user.email,
+                success: false,
+                action: 'auth_creation_failed',
+                error: 'No user returned from creation'
+              });
+              errors++;
+              continue;
+            }
+
+            authUserId = newAuthUser.user.id;
+            action = 'created_new_auth';
+            console.log(`   ✅ Created new auth user: ${authUserId}`);
+            
+            // Add to our map for potential duplicates in this batch
+            authUserMap.set(user.email.toLowerCase(), newAuthUser.user);
+          }
+
+          // Update user record with auth_user_id (with retry logic)
+          let updateSuccess = false;
+          let updateAttempts = 0;
+          const maxUpdateAttempts = 3;
+
+          while (!updateSuccess && updateAttempts < maxUpdateAttempts) {
+            updateAttempts++;
+            
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ auth_user_id: authUserId })
+              .eq('id', user.id);
+
+            if (!updateError) {
+              updateSuccess = true;
+            } else {
+              console.log(`   ⚠️  Database update attempt ${updateAttempts} failed: ${updateError.message}`);
+              
+              if (updateAttempts < maxUpdateAttempts) {
+                await delay(1000 * updateAttempts); // Exponential backoff
+              } else {
+                // Final attempt failed - cleanup if we created a new auth user
+                if (action === 'created_new_auth') {
+                  try {
+                    await supabase.auth.admin.deleteUser(authUserId);
+                    console.log(`   🧹 Cleaned up orphaned auth user: ${authUserId}`);
+                  } catch (cleanupError) {
+                    console.log(`   ⚠️  Failed to cleanup auth user: ${cleanupError}`);
+                  }
+                }
                 
                 results.push({
                   email: user.email,
                   success: false,
-                  error: `Failed to link new auth user: ${updateError.message}`,
-                  action: 'create_and_link_failed'
+                  action: 'database_update_failed',
+                  error: updateError.message,
+                  attempts: updateAttempts
                 });
                 errors++;
-              } else {
-                console.log(`✅ Successfully created and linked auth user for ${user.email}`);
-                results.push({
-                  email: user.email,
-                  success: true,
-                  action: 'created_and_linked_new_auth_user',
-                  auth_user_id: newAuthUser.user.id
-                });
-                successfulLinks++;
-
-                // Log security event
-                await supabase.from('security_events').insert({
-                  event_type: 'auth_user_created_and_linked',
-                  user_email: user.email,
-                  metadata: {
-                    user_id: user.id,
-                    auth_user_id: newAuthUser.user.id,
-                    action: 'created_and_linked'
-                  },
-                  severity: 'low'
-                });
+                break;
               }
             }
           }
 
-          // Small delay between individual users
-          await new Promise(resolve => setTimeout(resolve, 100));
+          if (!updateSuccess) {
+            continue; // Skip to next user
+          }
 
-        } catch (error) {
-          console.error(`❌ Unexpected error processing ${user.email}:`, error);
+          // Log successful linking
+          await supabase.from('security_events').insert({
+            event_type: 'auth_user_linked',
+            user_email: user.email,
+            metadata: {
+              auth_user_id: authUserId,
+              action: action,
+              user_id: user.id,
+              test_mode: testMode,
+              update_attempts: updateAttempts
+            },
+            severity: 'low'
+          });
+
+          results.push({
+            email: user.email,
+            success: true,
+            action: action,
+            auth_user_id: authUserId
+          });
+          successful++;
+          console.log(`   ✅ Success: ${action} (attempts: ${updateAttempts})`);
+
+          // Smaller delay between users
+          await delay(testMode ? 1000 : 500);
+
+        } catch (userError) {
+          console.log(`   ❌ Unexpected error for ${user.email}:`, userError);
+          
+          await supabase.from('security_events').insert({
+            event_type: 'auth_linking_user_error',
+            user_email: user.email,
+            metadata: {
+              error: userError.message,
+              stack: userError.stack,
+              test_mode: testMode
+            },
+            severity: 'high'
+          });
+          
           results.push({
             email: user.email,
             success: false,
-            error: error.message || 'Unexpected error',
-            action: 'unexpected_error'
+            action: 'unexpected_error',
+            error: userError.message || 'Unknown error'
           });
           errors++;
         }
       }
 
-      // Delay between batches
-      if (batchIndex < batches.length - 1) {
-        console.log('⏸️ Waiting 1000ms before next batch...');
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      // Delay between batches (longer in test mode)
+      if (i + batchSize < users.length) {
+        const delayMs = testMode ? 3000 : 2000;
+        console.log(`⏳ Waiting ${delayMs}ms before next batch...`);
+        await delay(delayMs);
       }
     }
 
-    console.log(`🏁 Linking process completed: ${successfulLinks} successful, ${errors} errors`);
-
-    // Log completion event
+    // Log batch completion
+    const completionSeverity = successful === users.length ? 'low' : (errors > successful ? 'high' : 'medium');
+    
     await supabase.from('security_events').insert({
-      event_type: 'auth_linking_batch_completed',
+      event_type: testMode ? 'test_auth_linking_completed' : 'batch_auth_linking_completed',
       metadata: {
-        processed: usersWithoutAuth.length,
-        successful: successfulLinks,
+        processed: users.length,
+        successful: successful,
         errors: errors,
-        target_emails: targetEmails
+        success_rate: users.length > 0 ? (successful / users.length * 100).toFixed(1) : 0,
+        test_mode: testMode,
+        results_summary: {
+          linked_existing: results.filter(r => r.action === 'linked_existing_auth').length,
+          created_new: results.filter(r => r.action === 'created_new_auth').length,
+          validation_failed: results.filter(r => r.action === 'validation_failed').length,
+          auth_creation_failed: results.filter(r => r.action === 'auth_creation_failed').length,
+          database_update_failed: results.filter(r => r.action === 'database_update_failed').length,
+          unexpected_errors: results.filter(r => r.action === 'unexpected_error').length
+        }
       },
-      severity: 'medium'
+      severity: completionSeverity
     });
+
+    const successRate = users.length > 0 ? (successful / users.length * 100).toFixed(1) : 0;
+    console.log(`🎉 Batch processing completed! Success: ${successful}/${users.length} (${successRate}%)`);
+
+    if (testMode && successful === users.length) {
+      console.log('🧪 TEST MODE: All users processed successfully - safe to run full batch');
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
-        processed: usersWithoutAuth.length,
-        successful: successfulLinks,
+        processed: users.length,
+        successful: successful,
         errors: errors,
+        success_rate: successRate,
+        test_mode: testMode,
         results: results
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
 
   } catch (error) {
-    console.error('❌ Fatal error in auth linking function:', error);
+    console.error('❌ Function error:', error);
+    
+    // Log the function-level error
+    try {
+      await supabase.from('security_events').insert({
+        event_type: 'auth_linking_function_error',
+        metadata: {
+          error: error.message,
+          stack: error.stack,
+          timestamp: new Date().toISOString()
+        },
+        severity: 'critical'
+      });
+    } catch (logError) {
+      console.error('Failed to log error:', logError);
+    }
     
     return new Response(
-      JSON.stringify({
+      JSON.stringify({ 
+        error: 'Internal server error', 
+        details: error.message,
         success: false,
-        error: error.message,
         processed: 0,
         successful: 0,
         errors: 1
       }),
       { 
-        status: 500,
+        status: 500, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
-});
+})
