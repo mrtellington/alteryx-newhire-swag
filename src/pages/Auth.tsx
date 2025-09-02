@@ -227,6 +227,42 @@ const Auth = () => {
           description: "Only employees with valid company accounts can access this system.",
           variant: "destructive"
         });
+      } else if (error.message.includes("User not found") || 
+                 error.message.includes("Invalid login credentials") ||
+                 error.message.includes("user_not_found") ||
+                 error.message.includes("signup_disabled")) {
+        // This indicates missing auth user - try to fix it automatically
+        console.log('Detected missing auth user, attempting automatic fix...');
+        toast({
+          title: "Setting up your account...",
+          description: "We're preparing your account for first-time access. This may take a moment.",
+          variant: "default",
+        });
+        
+        try {
+          const { error: fixError } = await supabase.functions.invoke('fix-missing-auth-users');
+          if (fixError) {
+            console.error('Failed to fix auth users:', fixError);
+            toast({
+              title: "Setup error",
+              description: "There was an issue setting up your account. Please contact support if this persists.",
+              variant: "destructive",
+            });
+          } else {
+            toast({
+              title: "Account prepared",
+              description: "Your account has been set up. Please try requesting the magic link again.",
+              variant: "default",
+            });
+          }
+        } catch (fixError) {
+          console.error('Exception fixing auth users:', fixError);
+          toast({
+            title: "Setup incomplete",
+            description: "Please contact support for assistance with account setup.",
+            variant: "destructive",
+          });
+        }
       } else {
         toast({ 
           title: "Unable to send link", 

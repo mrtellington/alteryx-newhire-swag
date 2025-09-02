@@ -227,6 +227,10 @@ export type Database = {
           deleted_id: string
         }[]
       }
+      create_missing_auth_users: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       create_secure_readonly_admin: {
         Args: { admin_email: string; created_by_email?: string }
         Returns: Json
