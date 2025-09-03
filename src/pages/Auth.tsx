@@ -14,6 +14,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPasswordStep, setShowPasswordStep] = useState(false);
+  const [passwordSent, setPasswordSent] = useState(false);
   const [userHasOrder, setUserHasOrder] = useState(false);
 
   useEffect(() => {
@@ -99,8 +100,8 @@ const Auth = () => {
         // User has already ordered - redirect to order status page
         navigate(`/order-status?email=${encodeURIComponent(email)}`);
       } else if (result.user_exists) {
-        // User exists but hasn't ordered - show password step
-        setShowPasswordStep(true);
+        // User exists but hasn't ordered - send password email
+        await sendPasswordEmail();
         setUserHasOrder(false);
       } else {
         // User doesn't exist
@@ -120,6 +121,37 @@ const Auth = () => {
     }
     
     setLoading(false);
+  };
+
+  const sendPasswordEmail = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-password-email', {
+        body: { email: email.trim().toLowerCase() }
+      });
+
+      if (error) {
+        console.error("Error sending password email:", error);
+        toast({
+          title: "Error",
+          description: "Failed to send password email. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setPasswordSent(true);
+      toast({
+        title: "Password sent!",
+        description: "Check your email for your login password."
+      });
+    } catch (error) {
+      console.error("Exception sending password email:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send password email. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handlePasswordLogin = async () => {
@@ -154,6 +186,7 @@ const Auth = () => {
 
   const handleBackToEmail = () => {
     setShowPasswordStep(false);
+    setPasswordSent(false);
     setPassword("");
   };
 
@@ -174,7 +207,57 @@ const Auth = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {showPasswordStep ? (
+          {passwordSent ? (
+            <div className="space-y-4">
+              <div className="text-center space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={email} 
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                  <h3 className="font-medium text-green-800">Password sent!</h3>
+                  <p className="text-sm text-green-700 mt-1">
+                    We've sent your login password to your email. Check your inbox and use the password to sign in below.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password (from email)</Label>
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    placeholder="Enter the password from your email"
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && !loading && handlePasswordLogin()}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Button 
+                    className="w-full" 
+                    variant="brand" 
+                    onClick={handlePasswordLogin} 
+                    disabled={loading || !password}
+                  >
+                    {loading ? "Signing in..." : "Sign In"}
+                  </Button>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    onClick={handleBackToEmail}
+                    disabled={loading}
+                  >
+                    Back to Email
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : showPasswordStep ? (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
