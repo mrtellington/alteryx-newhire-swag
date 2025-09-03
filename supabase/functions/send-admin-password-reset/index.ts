@@ -109,9 +109,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Reset link:", data.properties.action_link);
       
       const { data: emailData, error: emailError } = await resend.emails.send({
-        from: "Alteryx Admin <onboarding@resend.dev>",
-        to: ["tod.ellington@whitestonebranding.com"], // Temporary: Send to verified email due to Resend sandbox mode
-        subject: `Password Reset for ${email} - Admin Panel`,
+        from: "Admin Portal <admin@whitestonebranding.com>",
+        to: [email],
+        subject: "Password Reset - Admin Panel",
         html: `
           <h2>Password Reset Request</h2>
           <p>You have requested a password reset for your admin account.</p>
