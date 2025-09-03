@@ -84,19 +84,50 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send password reset email using Supabase Auth
-    const { error: resetError } = await supabase.auth.admin.resetPasswordForEmail(email, {
-      redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:3000'}/admin/login`
+    const { data, error: resetError } = await supabase.auth.admin.generateLink({
+      type: 'recovery',
+      email: email,
+      options: {
+        redirectTo: `${Deno.env.get('SITE_URL') || 'http://localhost:3000'}/admin/login`
+      }
     });
 
     if (resetError) {
-      console.error("Error sending password reset:", resetError);
+      console.error("Error generating password reset link:", resetError);
       return new Response(
-        JSON.stringify({ error: "Failed to send password reset email" }),
+        JSON.stringify({ error: "Failed to generate password reset link" }),
         {
           status: 500,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
+    }
+
+    // Send the email using Resend
+    if (data.properties?.action_link) {
+      const { error: emailError } = await resend.emails.send({
+        from: "Whitestone <admin@whitestonebranding.com>",
+        to: [email],
+        subject: "Password Reset - Admin Panel",
+        html: `
+          <h2>Password Reset Request</h2>
+          <p>You have requested a password reset for your admin account.</p>
+          <p><a href="${data.properties.action_link}" style="background: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></p>
+          <p>If you didn't request this, you can safely ignore this email.</p>
+          <p>This link will expire in 1 hour.</p>
+        `,
+      });
+
+      if (emailError) {
+        console.error("Error sending email:", emailError);
+        return new Response(
+          JSON.stringify({ error: "Failed to send password reset email" }),
+          {
+            status: 500,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
     }
 
     // Log the password reset request
