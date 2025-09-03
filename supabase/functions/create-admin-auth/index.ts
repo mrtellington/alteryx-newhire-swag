@@ -114,7 +114,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from('admin_users')
       .select('*')
       .eq('active', true)
-      .is('user_id', null);
+      .is('auth_user_id', null);
 
     if (fetchError) {
       console.error('❌ Error fetching admin users:', fetchError);
@@ -174,7 +174,7 @@ const handler = async (req: Request): Promise<Response> => {
         // Update admin_users table with the auth user ID
         const { error: updateError } = await supabase
           .from('admin_users')
-          .update({ user_id: authUser.user?.id })
+          .update({ auth_user_id: authUser.user?.id })
           .eq('email', adminUser.email);
 
         if (updateError) {
