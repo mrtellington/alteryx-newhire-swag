@@ -45,3 +45,6 @@ verify_jwt = false
 
 [functions.force-password-update]
 verify_jwt = false
+
+[functions.admin-login-fix]
+verify_jwt = false
