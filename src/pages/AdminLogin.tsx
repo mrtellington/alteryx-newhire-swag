@@ -23,7 +23,6 @@ const AdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPasswordFields, setShowPasswordFields] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [lastAttempt, setLastAttempt] = useState<number | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState<number>(0);
@@ -170,68 +169,39 @@ const AdminLogin = () => {
       return;
     }
 
+    if (!password) {
+      toast({
+        title: "Password Required",
+        description: "Please enter your password.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      if (showPasswordFields && password) {
-        // Password login
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
+      // Password login only
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
 
-        if (error) {
-          await logEnhancedSecurityEvent('admin_password_login_failed', { 
-            email: email.substring(0, 20) + '...',
-            error: error.message 
-          }, 'high');
-          toast({
-            title: "Login Failed",
-            description: "Invalid email or password.",
-            variant: "destructive"
-          });
-        } else {
-          await logEnhancedSecurityEvent('admin_password_login_success', { 
-            email: email.substring(0, 20) + '...' 
-          });
-          // Success will be handled by auth state change
-        }
+      if (error) {
+        await logEnhancedSecurityEvent('admin_password_login_failed', { 
+          email: email.substring(0, 20) + '...',
+          error: error.message 
+        }, 'high');
+        toast({
+          title: "Login Failed",
+          description: "Invalid email or password.",
+          variant: "destructive"
+        });
       } else {
-        // Magic link login
-        const redirectUrl = `${window.location.origin}/admin`;
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: redirectUrl
-          }
+        await logEnhancedSecurityEvent('admin_password_login_success', { 
+          email: email.substring(0, 20) + '...' 
         });
-
-        if (error) {
-          if (error.message.includes('rate limit') || error.message.includes('too many')) {
-            setLastAttempt(Date.now());
-            setCooldownSeconds(60);
-            toast({
-              title: "Rate Limited",
-              description: "Too many attempts. Please wait before trying again.",
-              variant: "destructive"
-            });
-          } else {
-            toast({
-              title: "Error",
-              description: error.message,
-              variant: "destructive"
-            });
-          }
-        } else {
-          await logEnhancedSecurityEvent('admin_login_magic_link_sent', { 
-            email: email.substring(0, 20) + '...' 
-          });
-          toast({
-            title: "Magic Link Sent",
-            description: `A secure login link has been sent to ${email}. Check your inbox and click the link to access the admin dashboard.`,
-          });
-          setEmail("");
-        }
+        // Success will be handled by auth state change
       }
     } catch (error) {
       console.error('Admin login error:', error);
@@ -323,7 +293,7 @@ const AdminLogin = () => {
             <div>
               <CardTitle className="text-2xl font-bold">Admin Access</CardTitle>
               <CardDescription className="text-base">
-                Enter your admin email to receive a secure magic link
+                Enter your admin credentials to access the dashboard
               </CardDescription>
             </div>
           </CardHeader>
@@ -339,35 +309,29 @@ const AdminLogin = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={loading || cooldownSeconds > 0}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !loading && cooldownSeconds === 0) {
-                    if (showPasswordFields && password) {
-                      handleAdminLogin();
-                    } else if (!showPasswordFields) {
-                      handleAdminLogin();
-                    }
+                  if (e.key === 'Enter' && !loading && cooldownSeconds === 0 && email && password) {
+                    handleAdminLogin();
                   }
                 }}
               />
             </div>
 
-            {showPasswordFields && (
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading || cooldownSeconds > 0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !loading && cooldownSeconds === 0 && password) {
-                      handleAdminLogin();
-                    }
-                  }}
-                />
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={loading || cooldownSeconds > 0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !loading && cooldownSeconds === 0 && password) {
+                    handleAdminLogin();
+                  }
+                }}
+              />
+            </div>
 
             {showPasswordReset ? (
               <div className="space-y-3">
@@ -400,41 +364,26 @@ const AdminLogin = () => {
               <div className="space-y-3">
                 <Button 
                   onClick={handleAdminLogin} 
-                  disabled={loading || cooldownSeconds > 0 || (!showPasswordFields && !email) || (showPasswordFields && (!email || !password))}
+                  disabled={loading || cooldownSeconds > 0 || !email || !password}
                   className="w-full"
                 >
                   {loading ? (
-                    showPasswordFields ? "Signing In..." : "Sending Magic Link..."
+                    "Signing In..."
                   ) : cooldownSeconds > 0 ? (
                     `Wait ${cooldownSeconds}s`
-                  ) : showPasswordFields ? (
-                    "Sign In with Password"
                   ) : (
-                    "Send Admin Magic Link"
+                    "Sign In"
                   )}
                 </Button>
 
-                <div className="flex flex-col space-y-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowPasswordFields(!showPasswordFields)}
-                    disabled={loading}
-                    className="w-full"
-                  >
-                    {showPasswordFields ? "Use Magic Link Instead" : "Use Password Instead"}
-                  </Button>
-                  
-                  {showPasswordFields && (
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowPasswordReset(true)}
-                      disabled={loading}
-                      className="w-full text-sm"
-                    >
-                      Forgot Password?
-                    </Button>
-                  )}
-                </div>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowPasswordReset(true)}
+                  disabled={loading}
+                  className="w-full text-sm"
+                >
+                  Forgot Password?
+                </Button>
               </div>
             )}
           </CardContent>
