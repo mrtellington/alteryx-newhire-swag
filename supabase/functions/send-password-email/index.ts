@@ -45,27 +45,44 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get user's auth info to retrieve their current password hash
-    // Since we can't get the actual password, we'll generate a temporary password
-    const { data: authUser, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      console.error("Error fetching users:", authError);
+    // First, check if user exists in our users table
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('id, email, auth_user_id')
+      .eq('email', email.toLowerCase())
+      .eq('invited', true)
+      .single();
+
+    if (userError || !userData) {
+      console.error("Error fetching user from users table:", userError);
       return new Response(
-        JSON.stringify({ error: "Failed to retrieve user information" }),
+        JSON.stringify({ error: "User not found or not invited" }),
         {
-          status: 500,
+          status: 404,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
     }
 
-    // Find the user by email
-    const user = authUser.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-    
-    if (!user) {
+    // If user doesn't have auth_user_id, we need to create one first
+    if (!userData.auth_user_id) {
+      console.error("User has no auth_user_id, cannot send password email");
       return new Response(
-        JSON.stringify({ error: "User not found" }),
+        JSON.stringify({ error: "User authentication not set up" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    // Find the auth user
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userData.auth_user_id);
+    
+    if (authError || !authUser.user) {
+      console.error("Error fetching auth user:", authError);
+      return new Response(
+        JSON.stringify({ error: "Authentication user not found" }),
         {
           status: 404,
           headers: { "Content-Type": "application/json", ...corsHeaders },
@@ -76,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate a temporary password and reset it
     const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
     
-    const { error: updateError } = await supabase.auth.admin.updateUserById(user.id, {
+    const { error: updateError } = await supabase.auth.admin.updateUserById(userData.auth_user_id, {
       password: tempPassword
     });
 
@@ -90,6 +107,8 @@ const handler = async (req: Request): Promise<Response> => {
         }
       );
     }
+
+    console.log(`Generated temporary password for user ${email}`);
 
     // Send email with the temporary password
     const emailResponse = await resend.emails.send({
