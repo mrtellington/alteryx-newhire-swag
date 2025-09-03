@@ -42,3 +42,6 @@ verify_jwt = false
 
 [functions.send-slack-notification]
 verify_jwt = false
+
+[functions.force-password-update]
+verify_jwt = false

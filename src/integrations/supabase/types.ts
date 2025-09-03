@@ -268,6 +268,10 @@ export type Database = {
             }
         Returns: Json
       }
+      force_update_admin_password: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       generate_order_number: {
         Args: Record<PropertyKey, never>
         Returns: string
