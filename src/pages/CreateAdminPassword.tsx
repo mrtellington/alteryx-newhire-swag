@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Shield, Key, Copy } from 'lucide-react';
 
 const CreateAdminPassword = () => {
+  console.log('CreateAdminPassword component loaded!');
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
 
