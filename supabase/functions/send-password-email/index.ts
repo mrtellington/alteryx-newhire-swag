@@ -48,7 +48,7 @@ const handler = async (req: Request): Promise<Response> => {
     // First, check if user exists in our users table
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, email, auth_user_id')
+      .select('id, email, auth_user_id, first_name')
       .eq('email', email.toLowerCase())
       .eq('invited', true)
       .single();
@@ -108,31 +108,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Generated temporary password for user ${email}`);
+    // Get the first name or use a fallback
+    const firstName = userData.first_name || "there";
 
     // Send email with the temporary password
     const emailResponse = await resend.emails.send({
       from: "Alteryx New Hire Store <admin@whitestonebranding.com>",
       to: [email],
-      subject: "Your Alteryx New Hire Store Login Password",
+      subject: "Password to Redeem the Alteryx New Hire Bundle",
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h1 style="color: #1e3a8a;">Alteryx New Hire Store</h1>
-          <p>Hello!</p>
-          <p>Here is your login password for the Alteryx New Hire Store:</p>
-          <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
-            <strong style="font-size: 18px; color: #1e3a8a;">${tempPassword}</strong>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+          <p>Hi ${firstName},</p>
+          <p>Here is your password to redeem your Alteryx New Hire Bundle:</p>
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <span style="font-size: 16px;">👉 </span>
+            <strong style="font-size: 20px; color: #1e3a8a; font-family: monospace;">${tempPassword}</strong>
           </div>
-          <p>You can now use this password to sign in and place your order for your New Hire Bundle.</p>
-          <p>For security, please consider changing this password after you log in.</p>
+          <p>The portal experience will automatically adjust based on your email address.</p>
+          <p>If you have any trouble signing in, please contact <a href="mailto:admin@whitestonebranding.com" style="color: #1e3a8a; text-decoration: none;">admin@whitestonebranding.com</a>.</p>
           <br>
-          <p>Welcome to the team!</p>
-          <p>The Alteryx Team</p>
-          <hr style="margin: 30px 0; border: none; border-top: 1px solid #e5e7eb;">
-          <p style="color: #6b7280; font-size: 12px;">
-            This is an automated message from the Alteryx New Hire Store. 
-            If you didn't request this password, please contact your IT administrator.
-          </p>
+          <p>Thank you on behalf of Alteryx,</p>
+          <p><strong>Whitestone</strong></p>
         </div>
       `,
     });
