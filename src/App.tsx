@@ -9,6 +9,7 @@ import Auth from "./pages/Auth";
 import Shop from "./pages/Shop";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
+import CreateAdminPassword from "./pages/CreateAdminPassword";
 import ThankYou from "./pages/ThankYou";
 import OrderStatus from "./pages/OrderStatus";
 import SiteHeader from "./components/SiteHeader";
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/thank-you" element={<ThankYou />} />
               <Route path="/order-status" element={<OrderStatus />} />
               <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/create-admin-password" element={<CreateAdminPassword />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/" element={<Index />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
