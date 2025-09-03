@@ -54,7 +54,7 @@ export const SessionTimeoutWarning: React.FC<SessionTimeoutWarningProps> = ({
     if (onSessionExpired) {
       onSessionExpired();
     } else {
-      window.location.href = isAdmin ? '/admin-login' : '/auth';
+      window.location.href = isAdmin ? '/admin/login' : '/auth';
     }
   };
 
