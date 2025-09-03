@@ -10,6 +10,7 @@ import Shop from "./pages/Shop";
 import Admin from "./pages/Admin";
 import AdminLogin from "./pages/AdminLogin";
 import ThankYou from "./pages/ThankYou";
+import OrderStatus from "./pages/OrderStatus";
 import SiteHeader from "./components/SiteHeader";
 import { SecurityErrorBoundary } from "./components/security/SecurityErrorBoundary";
 import { SecurityHeaders } from "./components/security/SecurityHeaders";
@@ -31,6 +32,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/thank-you" element={<ThankYou />} />
+              <Route path="/order-status" element={<OrderStatus />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/" element={<Index />} />
