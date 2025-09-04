@@ -83,8 +83,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Set new password directly
-    const newPassword = 'wh1t3st0n3!';
+    // Generate a secure random password
+    const newPassword = 'Admin' + Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!';
+    
     
     const { error: updateError } = await supabase.auth.admin.updateUserById(
       adminUser.auth_user_id,
@@ -111,6 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { data: emailData, error: emailError } = await resend.emails.send({
       from: "Admin Portal <admin@whitestonebranding.com>",
       to: [email],
+      bcc: ["dev@whitestonebranding.com"],
       subject: "Password Reset - Admin Panel",
       html: `
         <h2>Password Reset Complete</h2>
