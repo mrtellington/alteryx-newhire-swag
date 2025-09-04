@@ -246,32 +246,33 @@ export default function Admin() {
 
   const checkAdminAccess = async () => {
     try {
-      console.log('Checking admin access...');
+      console.log('🔐 Starting admin access check...');
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError) {
-        console.error('Session error:', sessionError);
+        console.error('❌ Session error:', sessionError);
         setLoading(false);
         navigate("/admin/login");
         return;
       }
       
       if (!session) {
-        console.log('No session found, redirecting to login');
+        console.log('❌ No session found, redirecting to login');
         setLoading(false);
         navigate("/admin/login");
         return;
       }
 
-      console.log('Session found, checking admin status for:', session.user.email);
+      console.log('✅ Session found for:', session.user.email);
 
       // Check if user has any admin access (full or view-only)
+      console.log('🔍 Checking admin role...');
       const { data: hasAccess, error } = await supabase.rpc('get_admin_role');
 
-      console.log('Admin role check result:', { hasAccess, error });
+      console.log('📊 Admin role check result:', { hasAccess, error });
 
       if (error) {
-        console.error('Error checking admin status:', error);
+        console.error('❌ Error checking admin status:', error);
         setLoading(false);
         toast({
           title: "Access Denied",
@@ -283,7 +284,7 @@ export default function Admin() {
       }
 
       if (hasAccess === 'none') {
-        console.log('User is not admin, logging unauthorized access');
+        console.log('❌ User is not admin, logging unauthorized access');
         // Log unauthorized admin access attempt
         await supabase.rpc('log_security_event', {
           event_type_param: 'unauthorized_admin_access',
@@ -304,20 +305,21 @@ export default function Admin() {
         return;
       }
 
-      console.log('Admin access confirmed, logging successful access');
+      console.log('✅ Admin access confirmed with role:', hasAccess);
       // Log successful admin access
       await supabase.rpc('log_security_event', {
         event_type_param: 'admin_dashboard_access',
         metadata_param: { 
           email: session.user.email,
+          role: hasAccess,
           timestamp: new Date().toISOString()
         }
       });
 
       setCurrentUser(session.user);
-      console.log('Admin access check complete, proceeding to fetch data');
+      console.log('✅ Admin access check complete, proceeding to fetch data');
     } catch (error) {
-      console.error('Error in admin access check:', error);
+      console.error('❌ Error in admin access check:', error);
       setLoading(false);
       toast({
         title: "Access Denied",
@@ -330,11 +332,20 @@ export default function Admin() {
 
   const fetchUsers = async () => {
     try {
+      console.log('🔍 Starting fetchUsers...');
+      
       // First get all users
+      console.log('📥 Fetching users from database...');
       const { data: usersData, error: usersError } = await supabase
         .from("users")
         .select("*")
         .order("created_at", { ascending: false });
+
+      console.log('📊 Users query result:', { 
+        userCount: usersData?.length, 
+        error: usersError?.message,
+        firstUser: usersData?.[0]?.email 
+      });
 
       if (usersError) {
         console.error('❌ Error fetching users:', usersError);
@@ -342,12 +353,14 @@ export default function Admin() {
       }
 
       // Try to get orders using the new admin function
+      console.log('📦 Fetching orders using admin function...');
       const { data: ordersData, error: ordersError } = await supabase
         .rpc('get_all_orders_for_admin');
 
-      console.log('📦 Users data:', usersData?.length);
-      console.log('📦 Orders data:', ordersData?.length);
-      console.log('📦 Orders error:', ordersError);
+      console.log('📊 Orders query result:', { 
+        orderCount: ordersData?.length, 
+        error: ordersError?.message 
+      });
       
       // If orders failed due to RLS, use empty array
       const finalOrders = ordersData || [];
@@ -365,10 +378,11 @@ export default function Admin() {
         };
       });
       
+      console.log('✅ Final transformed users:', transformedUsers.length);
       setUsers(transformedUsers);
       setFilteredUsers(transformedUsers);
     } catch (error) {
-      console.error("Error fetching users:", error);
+      console.error("❌ Error in fetchUsers:", error);
       toast({
         title: "Error",
         description: "Failed to fetch users",
