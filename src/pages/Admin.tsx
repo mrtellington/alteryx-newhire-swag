@@ -1136,54 +1136,6 @@ export default function Admin() {
       )}
 
 
-      <Card>
-        <CardHeader>
-          <CardTitle>System Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <p className="text-sm text-muted-foreground">
-              ✅ Automatic user creation via cognito-webhook is active
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ✅ All new users automatically get auth accounts and can login immediately
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ✅ CSV import and manual user addition use the same reliable process
-            </p>
-            <p className="text-sm text-muted-foreground">
-              ✅ Enhanced rate limiting protection prevents auth creation failures
-            </p>
-            {false && isAdmin && (
-              <div className="pt-4 border-t border-destructive/20">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-medium text-destructive">⚠️ Danger Zone</h3>
-                    <p className="text-xs text-muted-foreground">
-                      This will permanently delete ALL user data and auth accounts
-                    </p>
-                  </div>
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={handleNuclearReset}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <>
-                        <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      '🗑️ Nuclear Reset'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
