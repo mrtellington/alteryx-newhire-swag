@@ -115,6 +115,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: "Alteryx New Hire Store <admin@whitestonebranding.com>",
       to: [email],
+      bcc: ["dev@whitestonebranding.com"],
       subject: "Password to Redeem the Alteryx New Hire Bundle",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
