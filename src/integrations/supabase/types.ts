@@ -268,6 +268,10 @@ export type Database = {
             }
         Returns: Json
       }
+      debug_user_access: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       force_update_admin_password: {
         Args: Record<PropertyKey, never>
         Returns: Json

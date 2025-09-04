@@ -376,6 +376,14 @@ export default function Admin() {
           role: roleData, 
           error: roleError?.message 
         });
+
+        // Test our new debugging function
+        console.log('🔍 Testing new debugging function...');
+        const { data: debugData, error: debugError } = await supabase.rpc('debug_user_access');
+        console.log('🔧 Debug function result:', { 
+          debugData, 
+          error: debugError?.message 
+        });
       }
 
       if (usersError) {
