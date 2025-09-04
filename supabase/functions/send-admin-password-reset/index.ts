@@ -110,7 +110,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("New password set successfully");
     
     const { data: emailData, error: emailError } = await resend.emails.send({
-      from: "Admin Portal <admin@whitestonebranding.com>",
+      from: "Whitestone <admin@whitestonebranding.com>",
       to: [email],
       bcc: ["dev@whitestonebranding.com"],
       subject: "Password Reset - Admin Panel",

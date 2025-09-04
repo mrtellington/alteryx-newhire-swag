@@ -113,7 +113,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email with the temporary password
     const emailResponse = await resend.emails.send({
-      from: "Alteryx New Hire Store <admin@whitestonebranding.com>",
+      from: "Whitestone <admin@whitestonebranding.com>",
       to: [email],
       bcc: ["dev@whitestonebranding.com"],
       subject: "Password to Redeem the Alteryx New Hire Bundle",
