@@ -334,6 +334,13 @@ export default function Admin() {
     try {
       console.log('🔍 Starting fetchUsers...');
       
+      // First get current session info for debugging
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('🔑 Current session:', {
+        user: sessionData.session?.user?.email,
+        access_token: sessionData.session?.access_token ? 'present' : 'missing'
+      });
+      
       // First get all users
       console.log('📥 Fetching users from database...');
       const { data: usersData, error: usersError } = await supabase
@@ -344,8 +351,32 @@ export default function Admin() {
       console.log('📊 Users query result:', { 
         userCount: usersData?.length, 
         error: usersError?.message,
+        errorDetails: usersError,
         firstUser: usersData?.[0]?.email 
       });
+
+      // If users query failed, let's try debugging RLS
+      if (usersError || !usersData || usersData.length === 0) {
+        console.log('🔍 Users query failed or returned 0, testing RLS policy...');
+        
+        // Test if we can at least count users (simpler query)
+        const { data: countData, error: countError } = await supabase
+          .from("users")
+          .select("id", { count: 'exact', head: true });
+          
+        console.log('📊 Count query result:', { 
+          count: countData, 
+          error: countError?.message,
+          errorDetails: countError
+        });
+        
+        // Test admin role function directly
+        const { data: roleData, error: roleError } = await supabase.rpc('get_admin_role');
+        console.log('🔑 Role check result:', { 
+          role: roleData, 
+          error: roleError?.message 
+        });
+      }
 
       if (usersError) {
         console.error('❌ Error fetching users:', usersError);
