@@ -380,6 +380,10 @@ export type Database = {
           | { tee_size_param?: string; user_uuid: string }
         Returns: string
       }
+      test_policy_for_dev: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       validate_and_sanitize_input: {
         Args: { allow_html?: boolean; input_text: string; max_length?: number }
         Returns: string
