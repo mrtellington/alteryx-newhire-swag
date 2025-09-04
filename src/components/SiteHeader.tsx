@@ -90,12 +90,20 @@ export default function SiteHeader() {
                 // Sign out from Supabase
                 await supabase.auth.signOut();
                 
-                // Force a complete page reload to ensure clean state
-                window.location.href = "/auth";
+                // Check if user was an admin to determine redirect
+                if (isAdmin) {
+                  window.location.href = "/admin/login";
+                } else {
+                  window.location.href = "/auth";
+                }
               } catch (error) {
                 console.error('Error signing out:', error);
-                // Force reload even if signOut fails
-                window.location.href = "/auth";
+                // Force reload with appropriate redirect based on admin status
+                if (isAdmin) {
+                  window.location.href = "/admin/login";
+                } else {
+                  window.location.href = "/auth";
+                }
               }
             }}>
               Logout

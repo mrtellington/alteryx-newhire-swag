@@ -119,7 +119,7 @@ const handler = async (req: Request): Promise<Response> => {
         <p>Your admin password has been reset.</p>
         <p><strong>New Password:</strong> <code style="background: #f4f4f4; padding: 4px 8px; border-radius: 4px; font-family: monospace;">${newPassword}</code></p>
         <p>Please log in with this password and change it after logging in if desired.</p>
-        <p>Login URL: <a href="${Deno.env.get('SITE_URL') || 'http://localhost:3000'}/admin/login">${Deno.env.get('SITE_URL') || 'http://localhost:3000'}/admin/login</a></p>
+        <p>Login URL: <a href="https://alteryxnewhire.com/admin/login">https://alteryxnewhire.com/admin/login</a></p>
       `,
     });
 
