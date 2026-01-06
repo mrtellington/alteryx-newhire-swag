@@ -216,28 +216,33 @@ export type Database = {
         }
         Returns: boolean
       }
-      check_user_order_status: {
-        Args: { user_email: string }
-        Returns: Json
-      }
+      check_user_order_status: { Args: { user_email: string }; Returns: Json }
       cleanup_unauthorized_auth_users: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           deleted_email: string
           deleted_id: string
         }[]
       }
-      create_missing_auth_users: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
+      create_missing_auth_users: { Args: never; Returns: Json }
       create_secure_readonly_admin: {
         Args: { admin_email: string; created_by_email?: string }
         Returns: Json
       }
-      create_user_from_webhook: {
-        Args:
-          | {
+      create_user_from_webhook:
+        | {
+            Args: {
+              auth_user_id?: string
+              user_email: string
+              user_first_name?: string
+              user_full_name?: string
+              user_last_name?: string
+              user_shipping_address?: Json
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
               auth_user_id?: string
               order_date?: string
               order_number?: string
@@ -247,45 +252,31 @@ export type Database = {
               user_last_name?: string
               user_shipping_address?: Json
             }
-          | {
-              auth_user_id?: string
-              user_email: string
-              user_first_name?: string
-              user_full_name?: string
-              user_last_name?: string
-              user_shipping_address?: Json
-            }
-          | {
+            Returns: Json
+          }
+        | {
+            Args: {
               auth_user_id?: string
               user_email: string
               user_full_name?: string
               user_shipping_address?: Json
             }
-          | {
+            Returns: Json
+          }
+        | {
+            Args: {
               user_email: string
               user_full_name: string
               user_shipping_address?: Json
             }
-        Returns: Json
-      }
-      debug_user_access: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      force_update_admin_password: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      generate_order_number: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_admin_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+            Returns: string
+          }
+      debug_user_access: { Args: never; Returns: Json }
+      force_update_admin_password: { Args: never; Returns: Json }
+      generate_order_number: { Args: never; Returns: string }
+      get_admin_role: { Args: never; Returns: string }
       get_all_orders_for_admin: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           date_submitted: string
           id: string
@@ -298,18 +289,15 @@ export type Database = {
         }[]
       }
       get_auth_users_to_clean: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           email: string
           reason: string
         }[]
       }
-      get_current_user_admin_status: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      get_current_user_admin_status: { Args: never; Returns: boolean }
       get_security_dashboard: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           event_count: number
           event_type: string
@@ -319,32 +307,17 @@ export type Database = {
           unique_users: number
         }[]
       }
-      is_current_user_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_full_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      is_current_user_admin: { Args: never; Returns: boolean }
+      is_full_admin: { Args: never; Returns: boolean }
       is_secure_readonly_admin: {
         Args: { admin_email?: string }
         Returns: boolean
       }
-      is_system_admin: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      is_user_admin: {
-        Args: { user_email?: string }
-        Returns: boolean
-      }
-      link_existing_auth_users: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      is_system_admin: { Args: never; Returns: boolean }
+      is_user_admin: { Args: { user_email?: string }; Returns: boolean }
+      link_existing_auth_users: { Args: never; Returns: string }
       list_all_views: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           view_definition: string
           view_name: string
@@ -373,29 +346,20 @@ export type Database = {
         Args: { event_data?: Json; event_type_param: string }
         Returns: undefined
       }
-      nuclear_reset_all_data: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      place_order: {
-        Args:
-          | Record<PropertyKey, never>
-          | { tee_size_param?: string }
-          | { tee_size_param?: string; user_uuid: string }
-        Returns: string
-      }
-      test_policy_for_dev: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      nuclear_reset_all_data: { Args: never; Returns: Json }
+      place_order:
+        | { Args: never; Returns: string }
+        | { Args: { tee_size_param?: string }; Returns: string }
+        | {
+            Args: { tee_size_param?: string; user_uuid: string }
+            Returns: string
+          }
+      test_policy_for_dev: { Args: never; Returns: boolean }
       validate_and_sanitize_input: {
         Args: { allow_html?: boolean; input_text: string; max_length?: number }
         Returns: string
       }
-      validate_email_domain: {
-        Args: { email_param: string }
-        Returns: boolean
-      }
+      validate_email_domain: { Args: { email_param: string }; Returns: boolean }
     }
     Enums: {
       security_event_severity: "low" | "medium" | "high" | "critical"
