@@ -19,6 +19,7 @@ export default function Shop() {
   const [showForm, setShowForm] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const sizes = useMemo(() => ["XS","S","M","L","XL","2XL","3XL","4XL"], []);
+  const unavailableSizes = useMemo(() => ["XS"], []); // Sizes that are out of stock
 
   // Initialize session security monitoring for authenticated users
   const { trackActivity } = useSessionSecurity({
@@ -142,31 +143,50 @@ export default function Shop() {
                     <div>
                       <p className="font-medium">Choose your tee size</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {sizes.map((s) => (
-                          <button
-                            key={s}
-                            type="button"
-                            className={
-                              `px-4 py-2 rounded-full border text-sm transition-colors ` +
-                              (selectedSize === s
-                                ? "bg-[hsl(var(--deep))] text-white border-transparent"
-                                : "bg-transparent text-[hsl(var(--deep))] border-[hsl(var(--deep))]")
-                            }
-                            onClick={() => setSelectedSize(s)}
-                            aria-pressed={selectedSize === s}
-                            aria-label={`Select size ${s}`}
-                          >
-                            {s}
-                          </button>
-                        ))}
+                        {sizes.map((s) => {
+                          const isUnavailable = unavailableSizes.includes(s);
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              disabled={isUnavailable}
+                              className={
+                                `px-4 py-2 rounded-full border text-sm transition-colors ` +
+                                (isUnavailable
+                                  ? "bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-50"
+                                  : selectedSize === s
+                                    ? "bg-[hsl(var(--deep))] text-white border-transparent"
+                                    : "bg-transparent text-[hsl(var(--deep))] border-[hsl(var(--deep))]")
+                              }
+                              onClick={() => !isUnavailable && setSelectedSize(s)}
+                              aria-pressed={selectedSize === s}
+                              aria-label={isUnavailable ? `Size ${s} is out of stock` : `Select size ${s}`}
+                            >
+                              {s}
+                            </button>
+                          );
+                        })}
                       </div>
+                      {selectedSize && unavailableSizes.includes(selectedSize) && (
+                        <p className="text-sm text-destructive mt-2">
+                          {selectedSize} is out of stock, please choose another size.
+                        </p>
+                      )}
                     </div>
 
                     <Button
                       variant="brand"
                       className="w-full py-6 text-base"
-                      onClick={() => selectedSize ? setShowForm(true) : toast({ title: "Select a size", description: "Please choose a tee size to continue." })}
-                      disabled={!selectedSize || (!!inventoryQuery.data && inventoryQuery.data.quantity_available <= 0)}
+                      onClick={() => {
+                        if (!selectedSize) {
+                          toast({ title: "Select a size", description: "Please choose a tee size to continue." });
+                        } else if (unavailableSizes.includes(selectedSize)) {
+                          toast({ title: "Size unavailable", description: `${selectedSize} is out of stock. Please choose another size.` });
+                        } else {
+                          setShowForm(true);
+                        }
+                      }}
+                      disabled={!selectedSize || unavailableSizes.includes(selectedSize) || (!!inventoryQuery.data && inventoryQuery.data.quantity_available <= 0)}
                     >
                       {inventoryQuery.data && inventoryQuery.data.quantity_available <= 0 ? "Out of stock" : "Claim your bundle"}
                     </Button>
