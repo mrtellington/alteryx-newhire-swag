@@ -9,6 +9,11 @@ import { toast } from "@/components/ui/use-toast";
 import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
 import { useSessionSecurity } from "@/hooks/useSessionSecurity";
 
+const INVENTORY_ENDPOINT = "https://script.google.com/macros/s/AKfycbxSnyVlbsm68mJW3KlJejV8gPO3G-gFvB6n-PWx4MoSy1FOjXNctrVDlzehCxbL38Cx/exec?token=lYr2X7Pga33UaGkyPLwp5ytHch0M0DKdR6CdcK";
+
+type SizeInventory = { sku: string; qty: number };
+type InventoryBySize = Record<string, SizeInventory>;
+
 const isAllowedEmail = (email: string) => {
   const emailTrimmed = email.trim().toLowerCase();
   return /@(?:alteryx\.com|whitestonebranding\.com)$/i.test(emailTrimmed);
@@ -18,8 +23,68 @@ export default function Shop() {
   const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedSizeSku, setSelectedSizeSku] = useState<string | null>(null);
+  const [sizeUnavailableMessage, setSizeUnavailableMessage] = useState<string | null>(null);
   const sizes = useMemo(() => ["XS","S","M","L","XL","2XL","3XL","4XL"], []);
-  const unavailableSizes = useMemo(() => ["XS"], []); // Sizes that are out of stock
+
+  // Fetch size inventory from Google Apps Script endpoint
+  const sizeInventoryQuery = useQuery({
+    queryKey: ["size-inventory"],
+    queryFn: async (): Promise<InventoryBySize> => {
+      const response = await fetch(INVENTORY_ENDPOINT);
+      if (!response.ok) throw new Error("Failed to fetch inventory");
+      const data = await response.json();
+      const inventoryMap: InventoryBySize = {};
+      if (data?.items && Array.isArray(data.items)) {
+        for (const item of data.items) {
+          if (item.size) {
+            inventoryMap[item.size] = { sku: item.sku || "", qty: item.qty ?? 0 };
+          }
+        }
+      }
+      return inventoryMap;
+    },
+    staleTime: 60000, // Cache for 1 minute
+    retry: 1,
+  });
+
+  const inventoryBySize = sizeInventoryQuery.data ?? {};
+  const inventoryLoaded = sizeInventoryQuery.isSuccess;
+  const inventoryFailed = sizeInventoryQuery.isError;
+
+  // Check if a size is available (qty > 0 or inventory not loaded)
+  const isSizeAvailable = (size: string): boolean => {
+    if (inventoryFailed || !inventoryLoaded) return true; // Don't block if fetch failed
+    const inv = inventoryBySize[size];
+    return inv ? inv.qty > 0 : true; // If size not in response, assume available
+  };
+
+  // Check if all sizes are out of stock
+  const allSizesOutOfStock = inventoryLoaded && !inventoryFailed && 
+    sizes.every(s => {
+      const inv = inventoryBySize[s];
+      return inv && inv.qty <= 0;
+    });
+
+  // Clear selection if selected size becomes unavailable after load
+  useEffect(() => {
+    if (selectedSize && inventoryLoaded && !inventoryFailed) {
+      if (!isSizeAvailable(selectedSize)) {
+        setSelectedSize(null);
+        setSelectedSizeSku(null);
+        setSizeUnavailableMessage("That size is out of stock.");
+      }
+    }
+  }, [inventoryLoaded, inventoryBySize, selectedSize, inventoryFailed]);
+
+  // Clear unavailable message when user selects a new size
+  const handleSizeSelect = (size: string) => {
+    if (!isSizeAvailable(size)) return;
+    setSelectedSize(size);
+    setSizeUnavailableMessage(null);
+    const inv = inventoryBySize[size];
+    setSelectedSizeSku(inv?.sku || null);
+  };
 
   // Initialize session security monitoring for authenticated users
   const { trackActivity } = useSessionSecurity({
@@ -144,7 +209,7 @@ export default function Shop() {
                       <p className="font-medium">Choose your tee size</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {sizes.map((s) => {
-                          const isUnavailable = unavailableSizes.includes(s);
+                          const isUnavailable = !isSizeAvailable(s);
                           return (
                             <button
                               key={s}
@@ -158,7 +223,7 @@ export default function Shop() {
                                     ? "bg-[hsl(var(--deep))] text-white border-transparent"
                                     : "bg-transparent text-[hsl(var(--deep))] border-[hsl(var(--deep))]")
                               }
-                              onClick={() => !isUnavailable && setSelectedSize(s)}
+                              onClick={() => handleSizeSelect(s)}
                               aria-pressed={selectedSize === s}
                               aria-label={isUnavailable ? `Size ${s} is out of stock` : `Select size ${s}`}
                             >
@@ -167,9 +232,9 @@ export default function Shop() {
                           );
                         })}
                       </div>
-                      {selectedSize && unavailableSizes.includes(selectedSize) && (
+                      {sizeUnavailableMessage && (
                         <p className="text-sm text-destructive mt-2">
-                          {selectedSize} is out of stock, please choose another size.
+                          {sizeUnavailableMessage}
                         </p>
                       )}
                     </div>
@@ -180,15 +245,15 @@ export default function Shop() {
                       onClick={() => {
                         if (!selectedSize) {
                           toast({ title: "Select a size", description: "Please choose a tee size to continue." });
-                        } else if (unavailableSizes.includes(selectedSize)) {
+                        } else if (!isSizeAvailable(selectedSize)) {
                           toast({ title: "Size unavailable", description: `${selectedSize} is out of stock. Please choose another size.` });
                         } else {
                           setShowForm(true);
                         }
                       }}
-                      disabled={!selectedSize || unavailableSizes.includes(selectedSize) || (!!inventoryQuery.data && inventoryQuery.data.quantity_available <= 0)}
+                      disabled={!selectedSize || !isSizeAvailable(selectedSize) || allSizesOutOfStock || (!!inventoryQuery.data && inventoryQuery.data.quantity_available <= 0)}
                     >
-                      {inventoryQuery.data && inventoryQuery.data.quantity_available <= 0 ? "Out of stock" : "Claim your bundle"}
+                      {allSizesOutOfStock || (inventoryQuery.data && inventoryQuery.data.quantity_available <= 0) ? "Out of stock" : "Claim your bundle"}
                     </Button>
 
                     <div className="space-y-2">
