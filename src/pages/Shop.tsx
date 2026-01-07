@@ -215,29 +215,39 @@ export default function Shop() {
                     <div>
                       <p className="font-medium">Choose your tee size</p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        {sizes.map((s) => {
-                          const isUnavailable = !isSizeAvailable(s);
-                          return (
-                            <button
+                        {sizeInventoryQuery.isLoading ? (
+                          // Loading skeleton for size buttons
+                          sizes.map((s) => (
+                            <div
                               key={s}
-                              type="button"
-                              disabled={isUnavailable}
-                              className={
-                                `px-4 py-2 rounded-full border text-sm transition-colors ` +
-                                (isUnavailable
-                                  ? "bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-50"
-                                  : selectedSize === s
-                                    ? "bg-[hsl(var(--deep))] text-white border-transparent"
-                                    : "bg-transparent text-[hsl(var(--deep))] border-[hsl(var(--deep))]")
-                              }
-                              onClick={() => handleSizeSelect(s)}
-                              aria-pressed={selectedSize === s}
-                              aria-label={isUnavailable ? `Size ${s} is out of stock` : `Select size ${s}`}
-                            >
-                              {s}
-                            </button>
-                          );
-                        })}
+                              className="px-4 py-2 rounded-full border border-muted bg-muted animate-pulse w-12 h-9"
+                            />
+                          ))
+                        ) : (
+                          sizes.map((s) => {
+                            const isUnavailable = !isSizeAvailable(s);
+                            return (
+                              <button
+                                key={s}
+                                type="button"
+                                disabled={isUnavailable}
+                                className={
+                                  `px-4 py-2 rounded-full border text-sm transition-colors ` +
+                                  (isUnavailable
+                                    ? "bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-50"
+                                    : selectedSize === s
+                                      ? "bg-[hsl(var(--deep))] text-white border-transparent"
+                                      : "bg-transparent text-[hsl(var(--deep))] border-[hsl(var(--deep))]")
+                                }
+                                onClick={() => handleSizeSelect(s)}
+                                aria-pressed={selectedSize === s}
+                                aria-label={isUnavailable ? `Size ${s} is out of stock` : `Select size ${s}`}
+                              >
+                                {s}
+                              </button>
+                            );
+                          })
+                        )}
                       </div>
                       {sizeUnavailableMessage && (
                         <p className="text-sm text-destructive mt-2">
