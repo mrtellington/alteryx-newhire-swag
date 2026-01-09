@@ -8,7 +8,7 @@ const corsHeaders = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -16,11 +16,38 @@ serve(async (req) => {
   }
 
   if (req.method !== 'POST') {
-    return new Response('Method not allowed', { status: 405 });
+    return new Response('Method not allowed', { status: 405, headers: corsHeaders });
   }
 
+  // Verify authentication
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.error('Nuclear reset: Missing authentication');
+    return new Response(
+      JSON.stringify({ error: 'Authentication required' }),
+      { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  }
+
+  // Validate user and check admin role
+  const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const { data: roleData, error: roleError } = await supabaseAuth.rpc('get_admin_role');
+  if (roleError || roleData !== 'admin') {
+    console.error('Nuclear reset: Access denied - not an admin', roleError);
+    return new Response(
+      JSON.stringify({ error: 'Admin access required' }),
+      { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  }
+
+  // Use service role client for actual operations
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
   try {
-    console.log('🚨 NUCLEAR RESET: Starting complete data wipe...');
+    console.log('🚨 NUCLEAR RESET: Starting complete data wipe (authorized by admin)...');
     
     // Step 1: Delete all auth users first
     console.log('🧹 Step 1: Deleting all auth users...');

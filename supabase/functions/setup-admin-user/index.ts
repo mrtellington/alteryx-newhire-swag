@@ -87,8 +87,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Create new auth user
-    const tempPassword = `Admin${Math.random().toString(36).slice(2)}!${Date.now()}`;
+    // Create new auth user with cryptographically secure password
+    const tempPassword = `Admin${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}!`;
     
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: email,
