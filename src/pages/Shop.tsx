@@ -31,15 +31,12 @@ export default function Shop() {
   const sizeInventoryQuery = useQuery({
     queryKey: ["size-inventory"],
     queryFn: async (): Promise<InventoryBySize> => {
-      console.log("[Inventory] Fetching from Google Apps Script...");
       const response = await fetch(INVENTORY_ENDPOINT, {
         method: 'GET',
         redirect: 'follow',
       });
-      console.log("[Inventory] Response status:", response.status);
       if (!response.ok) throw new Error("Failed to fetch inventory");
       const data = await response.json();
-      console.log("[Inventory] Data received:", data);
       const inventoryMap: InventoryBySize = {};
       if (data?.items && Array.isArray(data.items)) {
         for (const item of data.items) {
@@ -48,7 +45,6 @@ export default function Shop() {
           }
         }
       }
-      console.log("[Inventory] Parsed inventory:", inventoryMap);
       return inventoryMap;
     },
     staleTime: 60000, // Cache for 1 minute
