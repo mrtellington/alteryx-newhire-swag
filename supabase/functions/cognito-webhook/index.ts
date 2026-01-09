@@ -86,22 +86,30 @@ const handler = async (req: Request): Promise<Response> => {
   });
 
   if (!isValidOrigin) {
-    console.error('Suspicious request from unexpected origin:', {
+    console.error('Rejected request from invalid origin:', {
       origin,
       userAgent,
       clientIP
     });
     
-    // Log security event
+    // Log security event and reject the request
     await supabase.rpc('log_security_event', {
-      event_type: 'webhook_suspicious_origin',
-      metadata: {
+      event_type_param: 'webhook_rejected_invalid_origin',
+      metadata_param: {
         origin,
         user_agent: userAgent,
         client_ip: clientIP,
         expected_origins: EXPECTED_ORIGINS
       }
     });
+
+    return new Response(
+      JSON.stringify({ error: 'Invalid origin' }),
+      { 
+        status: 403, 
+        headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+      }
+    );
   }
 
   try {
