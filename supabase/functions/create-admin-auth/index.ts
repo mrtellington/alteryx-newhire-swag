@@ -144,8 +144,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`🔄 Processing admin user: ${adminUser.email}`);
       
       try {
-        // Generate a secure temporary password for admin users
-        const tempPassword = `Admin${Math.random().toString(36).slice(2)}!${Date.now()}`;
+        // Generate a cryptographically secure temporary password for admin users
+        const tempPassword = `Admin${crypto.randomUUID().replace(/-/g, '').substring(0, 12)}!`;
         
         // Create auth user with admin email
         const { data: authUser, error: authError } = await supabase.auth.admin.createUser({

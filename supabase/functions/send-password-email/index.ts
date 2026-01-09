@@ -90,8 +90,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate a temporary password and reset it
-    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
+    // Generate a cryptographically secure temporary password
+    const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
     
     const { error: updateError } = await supabase.auth.admin.updateUserById(userData.auth_user_id, {
       password: tempPassword

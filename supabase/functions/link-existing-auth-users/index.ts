@@ -86,14 +86,9 @@ const isValidEmailDomain = (email: string): boolean => {
   return lowerEmail.endsWith('@alteryx.com') || lowerEmail.endsWith('@whitestonebranding.com');
 }
 
-// Helper function to generate secure password
+// Helper function to generate cryptographically secure password
 const generateSecurePassword = (): string => {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  let result = '';
-  for (let i = 0; i < 16; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return crypto.randomUUID().replace(/-/g, '').substring(0, 16);
 }
 
 // Helper function to add delay between operations

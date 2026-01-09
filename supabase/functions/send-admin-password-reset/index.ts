@@ -83,8 +83,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate a secure random password
-    const newPassword = 'Admin' + Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + '!';
+    // Generate a cryptographically secure random password
+    const newPassword = 'Admin' + crypto.randomUUID().replace(/-/g, '').substring(0, 12) + '!';
     
     
     const { error: updateError } = await supabase.auth.admin.updateUserById(
