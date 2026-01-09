@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +43,34 @@ serve(async (req) => {
   }
 
   console.log(`Address autocomplete request: ${req.method} from ${req.headers.get('origin') || 'unknown'}`);
+
+  // Verify authentication
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.error('Missing or invalid Authorization header');
+    return new Response(
+      JSON.stringify({ error: 'Authentication required' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Validate the user's JWT token
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+    { global: { headers: { Authorization: authHeader } } }
+  );
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    console.error('Invalid authentication:', authError?.message);
+    return new Response(
+      JSON.stringify({ error: 'Invalid authentication' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  console.log(`Authenticated user: ${user.email}`);
 
   const apiKey = Deno.env.get("GOOGLE_PLACES_API_KEY");
   console.log(`API Key present: ${apiKey ? 'yes' : 'no'}`);
