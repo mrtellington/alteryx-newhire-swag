@@ -15,6 +15,9 @@ const EXPECTED_ORIGINS = [
   '127.0.0.1:5173'
 ];
 
+// Cognito Forms sends requests without an Origin header but with a specific User-Agent
+const TRUSTED_USER_AGENTS = ['CognitoForms'];
+
 interface CognitoFormData {
   email?: string;
   Email?: string;
@@ -75,18 +78,22 @@ const handler = async (req: Request): Promise<Response> => {
 
   console.log('Headers:', Object.fromEntries(req.headers));
   
-  // Validate origin
+  // Validate origin - also accept trusted user agents (like CognitoForms) even without origin
   const isValidOrigin = EXPECTED_ORIGINS.some(validOrigin => origin.includes(validOrigin));
+  const isTrustedUserAgent = TRUSTED_USER_AGENTS.some(trusted => userAgent.includes(trusted));
+  const isAllowed = isValidOrigin || isTrustedUserAgent;
   
   console.log('Request details:', {
     origin,
     userAgent,
     clientIP,
-    isValidOrigin
+    isValidOrigin,
+    isTrustedUserAgent,
+    isAllowed
   });
 
-  if (!isValidOrigin) {
-    console.error('Rejected request from invalid origin:', {
+  if (!isAllowed) {
+    console.error('Rejected request from invalid origin/user-agent:', {
       origin,
       userAgent,
       clientIP
@@ -99,7 +106,8 @@ const handler = async (req: Request): Promise<Response> => {
         origin,
         user_agent: userAgent,
         client_ip: clientIP,
-        expected_origins: EXPECTED_ORIGINS
+        expected_origins: EXPECTED_ORIGINS,
+        trusted_user_agents: TRUSTED_USER_AGENTS
       }
     });
 
@@ -111,6 +119,8 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   }
+  
+  console.log('Request accepted - origin/user-agent validated');
 
   try {
     console.log('Webhook received from Cognito Forms - Fixed foreign key constraints');
