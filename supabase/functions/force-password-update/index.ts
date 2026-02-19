@@ -12,76 +12,58 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log("Force updating password for lmisenhimer@alteryx.com");
-    
-    // Initialize Supabase client with service role
+    const body = await req.json().catch(() => ({}));
+    const { target_user_id, new_password } = body;
+
+    if (!target_user_id) {
+      return new Response(
+        JSON.stringify({ error: "target_user_id is required" }),
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    const password = new_password || '@l+eryxNH9!';
+
+    console.log(`Force updating password for user ID: ${target_user_id}`);
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Try a simple password first
-    const { error: updateError1 } = await supabase.auth.admin.updateUserById(
-      '675c1903-f935-40c3-9183-ba96b8f9bb33', // lmisenhimer@alteryx.com auth_user_id
+    const { data, error } = await supabase.auth.admin.updateUserById(
+      target_user_id,
       {
-        password: 'password123',
+        password,
         email_confirm: true
       }
     );
 
-    if (updateError1) {
-      console.error("Error updating to simple password:", updateError1);
-    } else {
-      console.log("Updated to simple password successfully");
-    }
-
-    // Now try the desired password
-    const { error: updateError2 } = await supabase.auth.admin.updateUserById(
-      '675c1903-f935-40c3-9183-ba96b8f9bb33',
-      {
-        password: '@l+eryxNH9!',
-        email_confirm: true
-      }
-    );
-
-    if (updateError2) {
-      console.error("Error updating to desired password:", updateError2);
-      // If complex password fails, stick with simple one
+    if (error) {
+      console.error("Error updating password:", error);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: "Password updated to 'password123' (complex password failed)",
-          password: 'password123'
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log("Password updated successfully to desired password");
-    
+    console.log(`Password updated successfully for ${data.user.email}`);
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Password updated to @l+eryxNH9!",
-        password: '@l+eryxNH9!'
+      JSON.stringify({
+        success: true,
+        message: `Password updated to ${password}`,
+        password,
+        email: data.user.email
       }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
 
   } catch (error: any) {
     console.error("Error in force-password-update function:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Internal server error" }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
     );
   }
 };
