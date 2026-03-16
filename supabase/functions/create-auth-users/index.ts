@@ -142,6 +142,55 @@ Deno.serve(async (req) => {
           })
 
           if (authError) {
+            // If user already exists in auth, try to find and link them
+            if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
+              console.log(`Auth user already exists for ${user.email}, attempting to find and link...`)
+              
+              // Use listUsers with a page size and search by email
+              let foundAuthId: string | null = null
+              let page = 1
+              const perPage = 50
+              
+              while (!foundAuthId) {
+                const { data: listData, error: listError } = await supabase.auth.admin.listUsers({
+                  page,
+                  perPage
+                })
+                
+                if (listError || !listData?.users?.length) break
+                
+                const match = listData.users.find(u => u.email?.toLowerCase() === user.email.toLowerCase())
+                if (match) {
+                  foundAuthId = match.id
+                  break
+                }
+                
+                if (listData.users.length < perPage) break
+                page++
+              }
+              
+              if (foundAuthId) {
+                const { error: linkError } = await supabase
+                  .from('users')
+                  .update({ auth_user_id: foundAuthId })
+                  .eq('id', user.id)
+                
+                if (linkError) {
+                  console.error(`Failed to link existing auth user for ${user.email}:`, linkError)
+                  failureCount++
+                  failures.push({ email: user.email, error: `Link failed: ${linkError.message}` })
+                } else {
+                  console.log(`Successfully linked existing auth user for ${user.email}`)
+                  successCount++
+                }
+              } else {
+                console.error(`Could not find existing auth user for ${user.email}`)
+                failureCount++
+                failures.push({ email: user.email, error: 'Auth user exists but could not be found for linking' })
+              }
+              continue
+            }
+            
             console.error(`Failed to create auth user for ${user.email}:`, authError)
             failureCount++
             failures.push({ email: user.email, error: authError.message })
