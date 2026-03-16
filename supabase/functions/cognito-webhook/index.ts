@@ -395,14 +395,28 @@ const handler = async (req: Request): Promise<Response> => {
         // If user already exists in auth, find them
         if (authError.message?.includes('already been registered') || authError.message?.includes('already exists')) {
           console.log('User already exists in auth, attempting to find existing auth user');
-          const { data: authUsers, error: lookupError } = await supabase.auth.admin.listUsers();
           
-          if (!lookupError && authUsers?.users) {
-            const existingAuthUser = authUsers.users.find(user => user.email?.toLowerCase() === email);
+          // Paginate through auth users to find the match
+          let page = 1;
+          const perPage = 50;
+          
+          while (!authUserId) {
+            const { data: listData, error: lookupError } = await supabase.auth.admin.listUsers({
+              page,
+              perPage
+            });
+            
+            if (lookupError || !listData?.users?.length) break;
+            
+            const existingAuthUser = listData.users.find(user => user.email?.toLowerCase() === email);
             if (existingAuthUser) {
               authUserId = existingAuthUser.id;
               console.log(`Found existing auth user with ID: ${authUserId}`);
+              break;
             }
+            
+            if (listData.users.length < perPage) break;
+            page++;
           }
         }
         
