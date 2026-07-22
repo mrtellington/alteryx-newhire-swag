@@ -8,7 +8,7 @@ import ShippingAddressForm from "@/components/ShippingAddressForm";
 import { toast } from "@/components/ui/use-toast";
 import { SessionTimeoutWarning } from "@/components/security/SessionTimeoutWarning";
 import { useSessionSecurity } from "@/hooks/useSessionSecurity";
-import newHireBundleImage from "@/assets/new-hire-bundle-2026.png.asset.json";
+import newHireBundleImage from "@/assets/new-hire-bundle-2026-v2.png.asset.json";
 
 const INVENTORY_ENDPOINT = "https://script.google.com/macros/s/AKfycbxSnyVlbsm68mJW3KlJejV8gPO3G-gFvB6n-PWx4MoSy1FOjXNctrVDlzehCxbL38Cx/exec?token=lYr2X7Pga33UaGkyPLwp5ytHch0M0DKdR6CdcK";
 
