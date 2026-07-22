@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import logoAsset from "@/assets/AYX-new-logo.png.asset.json";
 
 export default function SiteHeader() {
   const [user, setUser] = useState<any>(null);
@@ -55,10 +56,10 @@ export default function SiteHeader() {
   return (
     <header className="w-full border-b border-border bg-background">
       <div className="container py-4 md:py-6 flex items-center justify-between">
-        <a href="/shop" aria-label="Alteryx Swag Store home">
+        <a href="/shop" aria-label="Alteryx New Hire Bundle home">
           <img
-            src="/lovable-uploads/208e6bfa-df2a-49ae-8ec6-845390b8b855.png"
-            alt="Alteryx Swag Store New Hire logo"
+            src={logoAsset.url}
+            alt="Alteryx New Hire Bundle logo"
             className="h-10 md:h-12 w-auto"
             loading="eager"
           />
