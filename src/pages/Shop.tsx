@@ -220,8 +220,8 @@ export default function Shop() {
                                   (isUnavailable
                                     ? "bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-50"
                                     : selectedSize === s
-                                      ? "bg-[hsl(var(--deep))] text-white border-transparent"
-                                      : "bg-transparent text-[hsl(var(--deep))] border-[hsl(var(--deep))]")
+                                      ? "bg-black text-white border-transparent"
+                                      : "bg-transparent text-black border-black")
                                 }
                                 onClick={() => handleSizeSelect(s)}
                                 aria-pressed={selectedSize === s}
@@ -242,7 +242,7 @@ export default function Shop() {
 
                     <Button
                       variant="brand"
-                      className="w-full py-6 text-base"
+                      className="w-full py-6 text-base bg-black text-white hover:bg-black/90"
                       onClick={() => {
                         if (!selectedSize) {
                           toast({ title: "Select a size", description: "Please choose a tee size to continue." });
