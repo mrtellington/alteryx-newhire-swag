@@ -282,8 +282,7 @@ const Auth = () => {
               </div>
               <div className="space-y-2">
                 <Button 
-                  className="w-full" 
-                  variant="brand" 
+                  className="w-full bg-black text-white hover:bg-black/90" 
                   onClick={handlePasswordLogin} 
                   disabled={loading || !password}
                 >
