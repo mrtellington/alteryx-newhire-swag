@@ -165,15 +165,6 @@ export default function Shop() {
     };
   }, [navigate]);
 
-  const inventoryQuery = useQuery({
-    queryKey: ["inventory"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("inventory").select("name, sku, quantity_available").limit(1).maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
   return (
     <main className="min-h-screen bg-background px-4 py-10">
       <SessionTimeoutWarning />
@@ -195,10 +186,6 @@ export default function Shop() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {inventoryQuery.isLoading && <p>Loading inventory...</p>}
-            {inventoryQuery.isError && (
-              <p className="text-destructive">Unable to load inventory.</p>
-            )}
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
                 <img
@@ -265,9 +252,9 @@ export default function Shop() {
                           setShowForm(true);
                         }
                       }}
-                      disabled={!selectedSize || !isSizeAvailable(selectedSize) || allSizesOutOfStock || (!!inventoryQuery.data && inventoryQuery.data.quantity_available <= 0)}
+                      disabled={!selectedSize || !isSizeAvailable(selectedSize) || allSizesOutOfStock}
                     >
-                      {allSizesOutOfStock || (inventoryQuery.data && inventoryQuery.data.quantity_available <= 0) ? "Out of stock" : "Claim your bundle"}
+                      {allSizesOutOfStock ? "Out of stock" : "Claim your bundle"}
                     </Button>
 
                     <div className="space-y-2">
