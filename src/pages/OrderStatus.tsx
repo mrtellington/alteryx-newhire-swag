@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams, Link } from "react-router-dom";
+import newHireBundleImage from "@/assets/new-hire-bundle-auth-2026.png.asset.json";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
