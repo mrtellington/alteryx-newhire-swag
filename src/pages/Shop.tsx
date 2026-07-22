@@ -177,11 +177,11 @@ export default function Shop() {
               <span className="sr-only">Bundle description</span>
               <ul className="list-disc pl-5 text-sm text-muted-foreground">
                 <li>This Bundle Includes:</li>
-                <li>Tote</li>
-                <li>Hat</li>
-                <li>Sticker</li>
-                <li>Water Bottle</li>
-                <li>Alteryx Tee</li>
+                <li>1 x Tee</li>
+                <li>1 x Tumblers</li>
+                <li>1 x Journal</li>
+                <li>1 x Pen Set</li>
+                <li>1 x Sticker Pack</li>
               </ul>
             </CardDescription>
           </CardHeader>
@@ -260,11 +260,11 @@ export default function Shop() {
                     <div className="space-y-2">
                       <p className="text-sm text-muted-foreground">This Bundle Includes:</p>
                       <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                        <li>Tote</li>
-                        <li>Hat</li>
-                        <li>Sticker</li>
-                        <li>Water Bottle</li>
-                        <li>Alteryx Tee</li>
+                        <li>1 x Tee</li>
+                        <li>1 x Tumblers</li>
+                        <li>1 x Journal</li>
+                        <li>1 x Pen Set</li>
+                        <li>1 x Sticker Pack</li>
                       </ul>
                     </div>
                   </div>
