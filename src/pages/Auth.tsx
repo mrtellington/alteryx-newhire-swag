@@ -314,8 +314,7 @@ const Auth = () => {
                 />
               </div>
               <Button 
-                className="w-full" 
-                variant="brand" 
+                className="w-full bg-black text-white hover:bg-black/90" 
                 onClick={handleEmailCheck} 
                 disabled={loading || !email}
               >
