@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import newHireBundleImage from "@/assets/new-hire-bundle-auth-2026.png.asset.json";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -196,8 +197,8 @@ const Auth = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <img
-              src="/lovable-uploads/47a14703-bd92-4198-9842-accafdefed92.png"
-              alt="Alteryx New Hire Bundle contents: tote, hat, sticker, water bottle, tee"
+              src={newHireBundleImage.url}
+              alt="Alteryx New Hire Bundle contents: water bottle, stickers, notebook, pens, tee, and welcome box"
               className="h-32 w-auto object-contain"
             />
           </div>
