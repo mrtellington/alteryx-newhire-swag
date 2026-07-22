@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import logoAsset from "@/assets/AYX-new-logo.png.asset.json";
 
 export default function SiteHeader() {
   const [user, setUser] = useState<any>(null);
