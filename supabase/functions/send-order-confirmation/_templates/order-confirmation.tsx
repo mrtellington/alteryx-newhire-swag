@@ -36,7 +36,7 @@ export const OrderConfirmationEmail = ({
     <Preview>
       {isAdminNotification 
         ? `New order received${orderId ? ` - ${orderId}` : ''}` 
-        : '🎁 Your Alteryx Welcome Kit Is on the Way!'
+        : 'Your New Hire Kit Has Been Ordered!'
       }
     </Preview>
     <Body style={main}>
@@ -65,34 +65,36 @@ export const OrderConfirmationEmail = ({
           </>
         ) : (
           <>
-            <Heading style={h1}>🎁 Your Alteryx Welcome Kit Is on the Way!</Heading>
-            <Text style={text}>Hey {customerName.split(' ')[0] || customerName}!</Text>
+            <Heading style={h1}>Your New Hire Kit Has Been Ordered!</Heading>
+            <Text style={text}>Hi {customerName.split(' ')[0] || customerName},</Text>
+            <Text style={text}>Welcome to the A Team! 🎉</Text>
             <Text style={text}>
-              We've officially placed your Alteryx new hire kit order—and trust us, it's got some goodies we think you'll love. 🚀
+              We've officially placed your <strong>A Team Welcome Kit</strong> order, and we can't wait for it to arrive. Inside you'll find a few items to help you celebrate the start of your journey with Alteryx and show off your A Team pride.
             </Text>
             <Text style={text}>
-              Once it ships, we'll drop you a tracking link so you can keep an eye out.
+              As soon as your kit ships, we'll send you another email with tracking information so you can follow its journey.
             </Text>
             <Text style={text}>
-              In the meantime, here are a few helpful links to get you set up:
+              While you wait, here are a few resources to help you get ready for Day 1:
             </Text>
             <Text style={linksList}>
               • <Link 
-                  href="https://login.microsoftonline.com/522f39d9-303d-488f-9deb-a6d77f1eafd8/oauth2/authorize?client%5Fid=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&response%5Fmode=form%5Fpost&response%5Ftype=code%20id%5Ftoken&resource=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&scope=openid&nonce=4B05D5C228FDBC544B3A07B3D416859E9286656AC38F1FD4%2D7D9F704B0D08FD8A7A806727D0688624A8F21F41524E00C1E1E115025DCCBB5E&redirect%5Furi=https%3A%2F%2Falteryx0%2Esharepoint%2Ecom%2F%5Fforms%2Fdefault%2Easpx&state=OD0w&claims=%7B%22id%5Ftoken%22%3A%7B%22xms%5Fcc%22%3A%7B%22values%22%3A%5B%22CP1%22%5D%7D%7D%7D&wsucxt=1&cobrandid=11bd8083%2D87e0%2D41b5%2Dbb78%2D0bc43c8a8e8a&client%2Drequest%2Did=12cebda1%2D90d7%2D0000%2De5c9%2D3325bcbd167e"
+                  href="https://alteryx.service-now.com/kb_view.do?sysparm_article=KB0013524"
                   style={linkStyle}
                 >
-                  Alteryx New Hire Portal
+                  What Can I Expect During My Onboarding
                 </Link><br/>
               • <Link 
-                  href="https://login.microsoftonline.com/522f39d9-303d-488f-9deb-a6d77f1eafd8/oauth2/authorize?client%5Fid=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&response%5Fmode=form%5Fpost&response%5Ftype=code%20id%5Ftoken&resource=00000003%2D0000%2D0ff1%2Dce00%2D000000000000&scope=openid&nonce=6FB244225EEFE57F0998E23ACAF7D78CE7D2489E0263181E%2DF8BB4B3D035C56BB9248D4F803FFC6788124C148E396786E66C9595EFD1D5B17&redirect%5Furi=https%3A%2F%2Falteryx0%2Esharepoint%2Ecom%2F%5Fforms%2Fdefault%2Easpx&state=OD0w&claims=%7B%22id%5Ftoken%22%3A%7B%22xms%5Fcc%22%3A%7B%22values%22%3A%5B%22CP1%22%5D%7D%7D%7D&wsucxt=1&cobrandid=11bd8083%2D87e0%2D41b5%2Dbb78%2D0bc43c8a8e8a&client%2Drequest%2Did=22cebda1%2Db0c5%2D0000%2De5c9%2D3b08f34c2323#checklist-and-access"
+                  href="https://alteryx.service-now.com/kb_knowledge.do?sys_id=b77ca9fd93cecf1c62293b0b6aba1008&sysparm_record_target=kb_knowledge&sysparm_record_row=8&sysparm_record_rows=8&sysparm_record_list=workflow_stateINdraft%2Creview%2Cpublished%2Cpending_retirement%2Cretired%2Coutdated%5Eauthor%3Djavascript%3Ags.getUserID%28%29%5EORrevised_by%3Djavascript%3Ags.getUserID%28%29%5EORDERBYsys_updated_on"
                   style={linkStyle}
                 >
-                  First Week Checklist
+                  The Alteryx Story – Our Mission, Vision and Values
                 </Link>
             </Text>
             <Text style={text}>
-              Welcome aboard—we're so excited you're here!
+              We're excited to have you joining the team and can't wait to officially welcome you.
             </Text>
+            <Text style={text}>See you soon!</Text>
           </>
         )}
         
@@ -110,9 +112,8 @@ export const OrderConfirmationEmail = ({
         )}
         
         <Text style={footer}>
-          Cheers,<br/>
-          Whitestone,<br/>
-          on behalf of the Global Onboarding Team
+          The Global Onboarding Team<br/>
+          <Link href="mailto:globalonboarding@alteryx.com" style={linkStyle}>globalonboarding@alteryx.com</Link>
         </Text>
       </Container>
     </Body>
