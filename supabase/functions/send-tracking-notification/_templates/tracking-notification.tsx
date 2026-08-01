@@ -51,17 +51,17 @@ export const TrackingNotificationEmail = ({
   return (
     <Html>
       <Head />
-      <Preview>Your Alteryx New Hire Bundle has shipped!</Preview>
+      <Preview>Your Kit Is Shipped!</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Heading style={h1}>Your Order Has Shipped! 📦</Heading>
+          <Heading style={h1}>Your Kit Is Shipped! 🚚</Heading>
           <Text style={text}>Hi {firstName},</Text>
           <Text style={text}>
-            Great news! Your Alteryx New Hire Bundle is on its way to you.
+            Good news—your A Team Welcome Kit is officially on its way!
           </Text>
+          <Text style={text}>You can track your shipment here:</Text>
           
           <Section style={trackingSection}>
-            <Heading style={h2}>Tracking Information</Heading>
             <Text style={text}>
               <strong>Order Number:</strong> {orderId}
             </Text>
@@ -71,7 +71,7 @@ export const TrackingNotificationEmail = ({
               </Text>
             )}
             <Text style={text}>
-              <strong>Tracking Number:</strong>{' '}
+              📦 <strong>Tracking:</strong>{' '}
               {trackingLink ? (
                 <Link href={trackingLink} target="_blank" style={trackingLink}>
                   {trackingNumber}
@@ -83,39 +83,32 @@ export const TrackingNotificationEmail = ({
           </Section>
           
           <Text style={text}>
-            {trackingLink 
-              ? "Click the tracking number above to see real-time updates on your package's location."
-              : "You can use this tracking number to check your package status on the carrier's website."
-            }
+            If you have any questions about your shipment, simply reply to this email and our team will be happy to help.
           </Text>
-          
-          <Hr style={hr} />
-          
-          <Section>
-            <Heading style={h2}>What's in Your Bundle</Heading>
-            <Text style={bundleItems}>
-              • Alteryx branded tote bag<br/>
-              • Alteryx hat<br/>
-              • Alteryx stickers<br/>
-              • Alteryx water bottle<br/>
-              • Alteryx t-shirt{teeSize ? ` (size: ${teeSize})` : ''}
-            </Text>
-          </Section>
-          
+
+          <Text style={text}>
+            While you're waiting for it to arrive, you can explore a few helpful resources:
+          </Text>
+          <Text style={bundleItems}>
+            • <Link href="https://alteryx.service-now.com/kb_knowledge.do?sys_id=861b29fd938ecf1c62293b0b6aba1095&sysparm_record_target=kb_knowledge&sysparm_record_row=7&sysparm_record_rows=7&sysparm_record_list=workflow_stateINdraft%2Creview%2Cpublished%2Cpending_retirement%2Cretired%2Coutdated%5Eauthor%3Djavascript%3Ags.getUserID%28%29%5EORrevised_by%3Djavascript%3Ags.getUserID%28%29%5EORDERBYsys_updated_on" style={resourceLink}>What To Expect Your First 90 Days</Link><br/>
+            • <Link href="https://alteryx0.sharepoint.com/:b:/s/GRP_AlteryxOrientation/IQBNB4QHhvvaQaZpkC7ZbwQwAdXTIOBR5AZMFaFnTHhGQQA?e=Ch1xUq" style={resourceLink}>First Week Checklist</Link>
+          </Text>
+
+          <Text style={text}>
+            Your first day is almost here, and we're looking forward to welcoming you to the A Team!
+          </Text>
+          <Text style={text}>See you soon,</Text>
+
           <Hr style={hr} />
           
           <Section>
             <Heading style={h2}>Shipping Address</Heading>
             <Text style={addressText} dangerouslySetInnerHTML={{ __html: shippingAddress }} />
           </Section>
-          
-          <Text style={text}>
-            If you have any questions about your shipment, just reply to this email and we'll help.
-          </Text>
-          
+
           <Text style={footer}>
-            — Whitestone<br/>
-            Alteryx New Hire Store
+            The Global Onboarding Team<br/>
+            <Link href="mailto:globalonboarding@alteryx.com" style={resourceLink}>globalonboarding@alteryx.com</Link>
           </Text>
         </Container>
       </Body>
@@ -179,6 +172,12 @@ const trackingCode = {
   padding: '4px 8px',
   borderRadius: '4px',
   fontFamily: 'monospace',
+  fontWeight: 'bold',
+}
+
+const resourceLink = {
+  color: '#2563eb',
+  textDecoration: 'underline',
   fontWeight: 'bold',
 }
 
