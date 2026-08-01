@@ -204,7 +204,7 @@ const Auth = () => {
           </div>
           <CardTitle>Alteryx New Hire Bundle</CardTitle>
           <CardDescription>
-            Welcome to the team! Enter your company email to check your New Hire Bundle status or sign in to place your order.
+            Welcome to the A Team! Enter your company email to check your New Hire Bundle status or sign in to place your order.
           </CardDescription>
         </CardHeader>
         <CardContent>
