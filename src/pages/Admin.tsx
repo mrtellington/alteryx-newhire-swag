@@ -119,6 +119,48 @@ export default function Admin() {
 
   // Helper function to get clean display name from user data
   const getDisplayName = (user: User) => {
+    return getDisplayNameInner(user);
+  };
+
+  const sendDeliveryNotification = async (orderId: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full administrators can send delivery notifications",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('send-delivery-notification', {
+        body: { orderId }
+      });
+
+      if (error) {
+        console.error('Error sending delivery notification:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send delivery notification",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "\"Your Kit Has Landed\" email sent",
+        });
+      }
+    } catch (error) {
+      console.error('Error in sendDeliveryNotification:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send delivery notification",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getDisplayNameInner = (user: User) => {
     // If we have clean first/last names, use them
     if (user.first_name && user.last_name) {
       return `${user.first_name} ${user.last_name}`;
