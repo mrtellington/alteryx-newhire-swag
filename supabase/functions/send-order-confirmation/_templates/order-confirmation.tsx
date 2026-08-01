@@ -36,7 +36,7 @@ export const OrderConfirmationEmail = ({
     <Preview>
       {isAdminNotification 
         ? `New order received${orderId ? ` - ${orderId}` : ''}` 
-        : '🎁 Your Alteryx Welcome Kit Is on the Way!'
+        : 'Your New Hire Kit Has Been Ordered!'
       }
     </Preview>
     <Body style={main}>
