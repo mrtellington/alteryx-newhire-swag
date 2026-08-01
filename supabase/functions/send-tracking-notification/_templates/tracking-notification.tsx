@@ -175,6 +175,12 @@ const trackingCode = {
   fontWeight: 'bold',
 }
 
+const resourceLink = {
+  color: '#2563eb',
+  textDecoration: 'underline',
+  fontWeight: 'bold',
+}
+
 const addressText = {
   color: '#333',
   fontSize: '14px',
