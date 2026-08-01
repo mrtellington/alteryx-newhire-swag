@@ -119,6 +119,48 @@ export default function Admin() {
 
   // Helper function to get clean display name from user data
   const getDisplayName = (user: User) => {
+    return getDisplayNameInner(user);
+  };
+
+  const sendDeliveryNotification = async (orderId: string) => {
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "Only full administrators can send delivery notifications",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke('send-delivery-notification', {
+        body: { orderId }
+      });
+
+      if (error) {
+        console.error('Error sending delivery notification:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send delivery notification",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "\"Your Kit Has Landed\" email sent",
+        });
+      }
+    } catch (error) {
+      console.error('Error in sendDeliveryNotification:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send delivery notification",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getDisplayNameInner = (user: User) => {
     // If we have clean first/last names, use them
     if (user.first_name && user.last_name) {
       return `${user.first_name} ${user.last_name}`;
@@ -1335,6 +1377,25 @@ export default function Admin() {
                                            <p>Send tracking notification</p>
                                          </TooltipContent>
                                        </Tooltip>
+                                    </TooltipProvider>
+                                  )}
+                                  {isAdmin && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => sendDeliveryNotification(order.id)}
+                                            className="text-xs px-2 py-1 h-6"
+                                          >
+                                            🎉
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Send "Your Kit Has Landed" email</p>
+                                        </TooltipContent>
+                                      </Tooltip>
                                     </TooltipProvider>
                                   )}
                                 </div>
