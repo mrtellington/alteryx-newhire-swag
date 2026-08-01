@@ -1379,6 +1379,25 @@ export default function Admin() {
                                        </Tooltip>
                                     </TooltipProvider>
                                   )}
+                                  {isAdmin && (
+                                    <TooltipProvider>
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => sendDeliveryNotification(order.id)}
+                                            className="text-xs px-2 py-1 h-6"
+                                          >
+                                            🎉
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Send "Your Kit Has Landed" email</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </TooltipProvider>
+                                  )}
                                 </div>
                               </div>
                             )}
