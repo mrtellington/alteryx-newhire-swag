@@ -178,7 +178,7 @@ export default function Shop() {
               <ul className="list-disc pl-5 text-sm text-muted-foreground">
                 <li>This Bundle Includes:</li>
                 <li>1 x Tee</li>
-                <li>1 x Tumblers</li>
+                <li>1 x Tumbler</li>
                 <li>1 x Journal</li>
                 <li>1 x Pen Set</li>
                 <li>1 x Sticker Pack</li>
@@ -261,7 +261,7 @@ export default function Shop() {
                       <p className="text-sm text-muted-foreground">This Bundle Includes:</p>
                       <ul className="list-disc pl-5 text-sm text-muted-foreground">
                         <li>1 x Tee</li>
-                        <li>1 x Tumblers</li>
+                        <li>1 x Tumbler</li>
                         <li>1 x Journal</li>
                         <li>1 x Pen Set</li>
                         <li>1 x Sticker Pack</li>
