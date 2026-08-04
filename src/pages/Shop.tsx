@@ -25,7 +25,6 @@ export default function Shop() {
   const [showForm, setShowForm] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedSizeSku, setSelectedSizeSku] = useState<string | null>(null);
-  const [sizeUnavailableMessage, setSizeUnavailableMessage] = useState<string | null>(null);
   const sizes = useMemo(() => ["XS","S","M","L","XL","2XL","3XL","4XL"], []);
 
   // Fetch size inventory from Google Apps Script endpoint
@@ -70,21 +69,8 @@ export default function Shop() {
       return inv && inv.qty <= 0;
     });
 
-  // Clear selection if selected size becomes unavailable after load
-  useEffect(() => {
-    if (selectedSize && inventoryLoaded && !inventoryFailed && !isSizeAvailable(selectedSize)) {
-      setSizeUnavailableMessage("This size is on backorder — you can still place your order, it will ship when restocked.");
-    }
-  }, [inventoryLoaded, inventoryBySize, selectedSize, inventoryFailed]);
-
-  // Clear unavailable message when user selects a new size
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size);
-    setSizeUnavailableMessage(
-      isSizeAvailable(size)
-        ? null
-        : "This size is on backorder — you can still place your order, it will ship when restocked."
-    );
     const inv = inventoryBySize[size];
     setSelectedSizeSku(inv?.sku || null);
   };
