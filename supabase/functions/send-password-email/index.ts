@@ -67,7 +67,7 @@ const handler = async (req: Request): Promise<Response> => {
     let { data: userData } = await supabase
       .from('users')
       .select('id, email, auth_user_id, first_name')
-      .eq('email', normalizedEmail)
+      .ilike('email', normalizedEmail)
       .maybeSingle();
 
     // Generate a cryptographically secure temporary password
@@ -92,7 +92,7 @@ const handler = async (req: Request): Promise<Response> => {
         const { data: existing } = await supabase
           .from('users')
           .select('id, email, auth_user_id, first_name')
-          .eq('email', normalizedEmail)
+          .ilike('email', normalizedEmail)
           .maybeSingle();
         userData = existing ?? null;
       } else {
@@ -114,6 +114,32 @@ const handler = async (req: Request): Promise<Response> => {
     if (authUserId) {
       const { data: existingAuth } = await supabase.auth.admin.getUserById(authUserId);
       if (!existingAuth?.user) authUserId = null;
+    }
+
+    // Resolve an existing auth account by email before attempting to create one
+    if (!authUserId) {
+      try {
+        const res = await fetch(
+          `${Deno.env.get('SUPABASE_URL')}/auth/v1/admin/users?filter=${encodeURIComponent(normalizedEmail)}`,
+          {
+            headers: {
+              apikey: Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+              Authorization: `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''}`,
+            },
+          },
+        );
+        if (res.ok) {
+          const body = await res.json();
+          const match = (body?.users ?? []).find(
+            (u: { id: string; email?: string }) => u.email?.toLowerCase() === normalizedEmail,
+          );
+          if (match) authUserId = match.id;
+        } else {
+          console.error('Auth admin lookup failed:', res.status, await res.text());
+        }
+      } catch (e) {
+        console.error('Auth admin lookup exception:', e);
+      }
     }
 
     if (!authUserId) {
