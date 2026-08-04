@@ -193,35 +193,25 @@ export default function Shop() {
                             />
                           ))
                         ) : (
-                          sizes.map((s) => {
-                            const isBackorder = !isSizeAvailable(s);
-                            return (
-                              <button
-                                key={s}
-                                type="button"
-                                className={
-                                  `px-4 py-2 rounded-full border text-sm transition-colors ` +
-                                  (selectedSize === s
-                                    ? "bg-black text-white border-transparent"
-                                    : isBackorder
-                                      ? "bg-transparent text-muted-foreground border-dashed border-black/40"
-                                      : "bg-transparent text-black border-black")
-                                }
-                                onClick={() => handleSizeSelect(s)}
-                                aria-pressed={selectedSize === s}
-                                aria-label={isBackorder ? `Select size ${s} (backorder)` : `Select size ${s}`}
-                              >
-                                {s}
-                              </button>
-                            );
-                          })
+                          sizes.map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              className={
+                                `px-4 py-2 rounded-full border text-sm transition-colors ` +
+                                (selectedSize === s
+                                  ? "bg-black text-white border-transparent"
+                                  : "bg-transparent text-black border-black")
+                              }
+                              onClick={() => handleSizeSelect(s)}
+                              aria-pressed={selectedSize === s}
+                              aria-label={`Select size ${s}`}
+                            >
+                              {s}
+                            </button>
+                          ))
                         )}
                       </div>
-                      {sizeUnavailableMessage && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {sizeUnavailableMessage}
-                        </p>
-                      )}
                     </div>
 
                     <Button
