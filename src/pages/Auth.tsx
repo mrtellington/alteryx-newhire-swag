@@ -142,19 +142,31 @@ const Auth = () => {
         description: "Unable to process your request. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const sendPasswordEmail = async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
     try {
-      const { data, error } = await supabase.functions.invoke('send-password-email', {
-        body: { email: email.trim().toLowerCase() }
-      });
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/send-password-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ email: email.trim().toLowerCase() }),
+          signal: controller.signal,
+        }
+      );
 
-      if (error) {
-        console.error("Error sending password email:", error);
+      if (!res.ok) {
+        console.error("Error sending password email:", res.status, await res.text());
         toast({
           title: "Error",
           description: "Failed to send password email. Please try again.",
@@ -172,9 +184,13 @@ const Auth = () => {
       console.error("Exception sending password email:", error);
       toast({
         title: "Error",
-        description: "Failed to send password email. Please try again.",
+        description: (error as any)?.name === "AbortError"
+          ? "The request timed out. Please try again."
+          : "Failed to send password email. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
