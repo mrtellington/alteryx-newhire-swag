@@ -72,20 +72,19 @@ export default function Shop() {
 
   // Clear selection if selected size becomes unavailable after load
   useEffect(() => {
-    if (selectedSize && inventoryLoaded && !inventoryFailed) {
-      if (!isSizeAvailable(selectedSize)) {
-        setSelectedSize(null);
-        setSelectedSizeSku(null);
-        setSizeUnavailableMessage("That size is out of stock.");
-      }
+    if (selectedSize && inventoryLoaded && !inventoryFailed && !isSizeAvailable(selectedSize)) {
+      setSizeUnavailableMessage("This size is on backorder — you can still place your order, it will ship when restocked.");
     }
   }, [inventoryLoaded, inventoryBySize, selectedSize, inventoryFailed]);
 
   // Clear unavailable message when user selects a new size
   const handleSizeSelect = (size: string) => {
-    if (!isSizeAvailable(size)) return;
     setSelectedSize(size);
-    setSizeUnavailableMessage(null);
+    setSizeUnavailableMessage(
+      isSizeAvailable(size)
+        ? null
+        : "This size is on backorder — you can still place your order, it will ship when restocked."
+    );
     const inv = inventoryBySize[size];
     setSelectedSizeSku(inv?.sku || null);
   };
@@ -209,23 +208,22 @@ export default function Shop() {
                           ))
                         ) : (
                           sizes.map((s) => {
-                            const isUnavailable = !isSizeAvailable(s);
+                            const isBackorder = !isSizeAvailable(s);
                             return (
                               <button
                                 key={s}
                                 type="button"
-                                disabled={isUnavailable}
                                 className={
                                   `px-4 py-2 rounded-full border text-sm transition-colors ` +
-                                  (isUnavailable
-                                    ? "bg-muted text-muted-foreground border-muted cursor-not-allowed opacity-50"
-                                    : selectedSize === s
-                                      ? "bg-black text-white border-transparent"
+                                  (selectedSize === s
+                                    ? "bg-black text-white border-transparent"
+                                    : isBackorder
+                                      ? "bg-transparent text-muted-foreground border-dashed border-black/40"
                                       : "bg-transparent text-black border-black")
                                 }
                                 onClick={() => handleSizeSelect(s)}
                                 aria-pressed={selectedSize === s}
-                                aria-label={isUnavailable ? `Size ${s} is out of stock` : `Select size ${s}`}
+                                aria-label={isBackorder ? `Select size ${s} (backorder)` : `Select size ${s}`}
                               >
                                 {s}
                               </button>
@@ -234,7 +232,7 @@ export default function Shop() {
                         )}
                       </div>
                       {sizeUnavailableMessage && (
-                        <p className="text-sm text-destructive mt-2">
+                        <p className="text-sm text-muted-foreground mt-2">
                           {sizeUnavailableMessage}
                         </p>
                       )}
@@ -246,15 +244,13 @@ export default function Shop() {
                       onClick={() => {
                         if (!selectedSize) {
                           toast({ title: "Select a size", description: "Please choose a tee size to continue." });
-                        } else if (!isSizeAvailable(selectedSize)) {
-                          toast({ title: "Size unavailable", description: `${selectedSize} is out of stock. Please choose another size.` });
                         } else {
                           setShowForm(true);
                         }
                       }}
-                      disabled={!selectedSize || !isSizeAvailable(selectedSize) || allSizesOutOfStock}
+                      disabled={!selectedSize}
                     >
-                      {allSizesOutOfStock ? "Out of stock" : "Claim your bundle"}
+                      {selectedSize && !isSizeAvailable(selectedSize) ? "Claim your bundle (backorder)" : "Claim your bundle"}
                     </Button>
 
                     <div className="space-y-2">
