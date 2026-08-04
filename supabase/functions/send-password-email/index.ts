@@ -73,6 +73,41 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate a cryptographically secure temporary password
     const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
 
+    // The users row must exist BEFORE creating the auth account:
+    // an auth.users trigger validates the email against public.users / admin_users.
+    if (!userData) {
+      const { data: inserted, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          email: normalizedEmail,
+          full_name: normalizedEmail.split('@')[0],
+          invited: true,
+          shipping_address: {},
+        })
+        .select('id, email, auth_user_id, first_name')
+        .single();
+
+      if (insertError) {
+        // Race / existing row — reuse it
+        const { data: existing } = await supabase
+          .from('users')
+          .select('id, email, auth_user_id, first_name')
+          .eq('email', normalizedEmail)
+          .maybeSingle();
+        userData = existing ?? null;
+      } else {
+        userData = inserted;
+      }
+
+      if (!userData) {
+        console.error("Unable to create users row for", normalizedEmail);
+        return new Response(
+          JSON.stringify({ error: "Unable to set up your account. Please contact support." }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
     // Resolve the auth account: reuse existing, otherwise create it
     let authUserId: string | null = userData?.auth_user_id ?? null;
 
@@ -112,39 +147,6 @@ const handler = async (req: Request): Promise<Response> => {
             { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
           );
         }
-      }
-    }
-
-    if (!userData) {
-      const { data: inserted, error: insertError } = await supabase
-        .from('users')
-        .insert({
-          email: normalizedEmail,
-          full_name: normalizedEmail.split('@')[0],
-          invited: true,
-          auth_user_id: authUserId,
-          shipping_address: {},
-        })
-        .select('id, email, auth_user_id, first_name')
-        .single();
-
-      if (insertError) {
-        // Race: a row was created concurrently — reuse it
-        const { data: existing } = await supabase
-          .from('users')
-          .select('id, email, auth_user_id, first_name')
-          .eq('email', normalizedEmail)
-          .maybeSingle();
-        userData = existing ?? null;
-      } else {
-        userData = inserted;
-      }
-
-      if (!userData) {
-        return new Response(
-          JSON.stringify({ error: "Unable to set up your account. Please contact support." }),
-          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
       }
     }
 
