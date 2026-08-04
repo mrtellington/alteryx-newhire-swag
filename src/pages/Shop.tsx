@@ -236,7 +236,7 @@ export default function Shop() {
                       }}
                       disabled={!selectedSize}
                     >
-                      {selectedSize && !isSizeAvailable(selectedSize) ? "Claim your bundle (backorder)" : "Claim your bundle"}
+                      Claim your bundle
                     </Button>
 
                     <div className="space-y-2">
