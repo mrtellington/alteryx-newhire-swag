@@ -54,13 +54,34 @@ const Auth = () => {
 
         // Ensure a users record exists (created once, never duplicated)
         try {
-          const { data, error } = await supabase.rpc("ensure_user_record");
-          const result: any = typeof data === "string" ? JSON.parse(data) : data;
-
-          if (error) {
-            console.error("Error ensuring user record:", error);
+          // Bounded request: a stalled connection must never leave the user
+          // stuck on "Signing in...".
+          const controller = new AbortController();
+          const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+          let result: any = null;
+          try {
+            const res = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/ensure_user_record`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  Authorization: `Bearer ${session.access_token}`,
+                },
+                body: "{}",
+                signal: controller.signal,
+              },
+            );
+            if (!res.ok) throw new Error(`ensure_user_record failed: ${res.status}`);
+            const raw = await res.json();
+            result = typeof raw === "string" ? JSON.parse(raw) : raw;
+          } catch (rpcError) {
+            console.error("Error ensuring user record:", rpcError);
             navigate("/shop", { replace: true });
             return;
+          } finally {
+            window.clearTimeout(timeoutId);
           }
 
           if (result && result.success === false) {
