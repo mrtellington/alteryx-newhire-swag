@@ -52,23 +52,6 @@ export default function Shop() {
   });
 
   const inventoryBySize = sizeInventoryQuery.data ?? {};
-  const inventoryLoaded = sizeInventoryQuery.isSuccess;
-  const inventoryFailed = sizeInventoryQuery.isError;
-
-  // Check if a size is available (qty > 0 or inventory not loaded)
-  const isSizeAvailable = (size: string): boolean => {
-    if (inventoryFailed || !inventoryLoaded) return true; // Don't block if fetch failed
-    const inv = inventoryBySize[size];
-    return inv ? inv.qty > 0 : true; // If size not in response, assume available
-  };
-
-  // Check if all sizes are out of stock
-  const allSizesOutOfStock = inventoryLoaded && !inventoryFailed && 
-    sizes.every(s => {
-      const inv = inventoryBySize[s];
-      return inv && inv.qty <= 0;
-    });
-
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size);
     const inv = inventoryBySize[size];
