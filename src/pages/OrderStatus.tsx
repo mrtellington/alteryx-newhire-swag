@@ -94,7 +94,7 @@ const OrderStatus = () => {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-brand-blue flex flex-col items-center justify-start pt-16 px-4">
+      <main className="min-h-screen bg-black flex flex-col items-center justify-start pt-16 px-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">Loading order information...</div>
@@ -106,7 +106,7 @@ const OrderStatus = () => {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-brand-blue flex flex-col items-center justify-start pt-16 px-4">
+      <main className="min-h-screen bg-black flex flex-col items-center justify-start pt-16 px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle>Order Status</CardTitle>
@@ -128,7 +128,7 @@ const OrderStatus = () => {
   }
 
   return (
-    <main className="min-h-screen bg-brand-blue flex flex-col items-center justify-start pt-16 px-4">
+    <main className="min-h-screen bg-black flex flex-col items-center justify-start pt-16 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
