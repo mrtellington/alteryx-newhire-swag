@@ -106,26 +106,33 @@ const Auth = () => {
     }
     
     setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15000);
     
     try {
-      // Check user's order status using the existing function
-      const { data: userCheck, error: checkError } = await supabase
-        .rpc('check_user_order_status', { 
-          user_email: email.trim().toLowerCase() 
-        });
+      // Use a bounded request so a stalled client connection can never leave
+      // existing users stuck on "Checking..." indefinitely.
+      const statusResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/rpc/check_user_order_status`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ user_email: normalizedEmail }),
+          signal: controller.signal,
+        },
+      );
 
-      if (checkError) {
-        console.error("Error checking user status:", checkError);
-        toast({ 
-          title: "Error", 
-          description: "Unable to verify your email. Please try again.",
-          variant: "destructive"
-        });
-        setLoading(false);
-        return;
+      if (!statusResponse.ok) {
+        throw new Error(`Status check failed with ${statusResponse.status}`);
       }
 
-      const result = typeof userCheck === 'object' ? userCheck : JSON.parse(userCheck as string);
+      const userCheck = await statusResponse.json();
+      const result = typeof userCheck === "string" ? JSON.parse(userCheck) : userCheck;
       
       if (result.has_ordered) {
         // User has already ordered - redirect to order status page
@@ -137,12 +144,16 @@ const Auth = () => {
       }
     } catch (error) {
       console.error("Error checking email:", error);
+      const timedOut = error instanceof DOMException && error.name === "AbortError";
       toast({ 
         title: "Error", 
-        description: "Unable to process your request. Please try again.",
+        description: timedOut
+          ? "The request timed out. Please try again."
+          : "Unable to process your request. Please try again.",
         variant: "destructive"
       });
     } finally {
+      window.clearTimeout(timeoutId);
       setLoading(false);
     }
   };
