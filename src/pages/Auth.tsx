@@ -97,7 +97,11 @@ const Auth = () => {
     }
 
     if (!isAllowedEmailDomain(email)) {
-      toast({ title: "Invalid email domain", description: "Use @alteryx.com or @whitestonebranding.com" });
+      toast({
+        title: "Access denied",
+        description: "This application is only available to authorized Alteryx New Hire users.",
+        variant: "destructive",
+      });
       return;
     }
     
