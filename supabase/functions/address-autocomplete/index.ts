@@ -54,14 +54,18 @@ serve(async (req) => {
     );
   }
 
-  // Validate the user's JWT token
+  // Validate the user's JWT token explicitly (works regardless of anon-key env naming)
+  const token = authHeader.replace('Bearer ', '').trim();
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-    { global: { headers: { Authorization: authHeader } } }
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ??
+      Deno.env.get('SUPABASE_ANON_KEY') ??
+      Deno.env.get('SUPABASE_PUBLISHABLE_KEY') ??
+      '',
+    { auth: { persistSession: false, autoRefreshToken: false } }
   );
 
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) {
     console.error('Invalid authentication:', authError?.message);
     return new Response(
