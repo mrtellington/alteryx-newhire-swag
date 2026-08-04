@@ -272,6 +272,7 @@ export type Database = {
             Returns: string
           }
       debug_user_access: { Args: never; Returns: Json }
+      ensure_user_record: { Args: never; Returns: Json }
       force_update_admin_password: { Args: never; Returns: Json }
       generate_order_number: { Args: never; Returns: string }
       get_admin_role: { Args: never; Returns: string }
