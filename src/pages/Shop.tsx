@@ -25,7 +25,6 @@ export default function Shop() {
   const [showForm, setShowForm] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedSizeSku, setSelectedSizeSku] = useState<string | null>(null);
-  const [sizeUnavailableMessage, setSizeUnavailableMessage] = useState<string | null>(null);
   const sizes = useMemo(() => ["XS","S","M","L","XL","2XL","3XL","4XL"], []);
 
   // Fetch size inventory from Google Apps Script endpoint
@@ -53,38 +52,8 @@ export default function Shop() {
   });
 
   const inventoryBySize = sizeInventoryQuery.data ?? {};
-  const inventoryLoaded = sizeInventoryQuery.isSuccess;
-  const inventoryFailed = sizeInventoryQuery.isError;
-
-  // Check if a size is available (qty > 0 or inventory not loaded)
-  const isSizeAvailable = (size: string): boolean => {
-    if (inventoryFailed || !inventoryLoaded) return true; // Don't block if fetch failed
-    const inv = inventoryBySize[size];
-    return inv ? inv.qty > 0 : true; // If size not in response, assume available
-  };
-
-  // Check if all sizes are out of stock
-  const allSizesOutOfStock = inventoryLoaded && !inventoryFailed && 
-    sizes.every(s => {
-      const inv = inventoryBySize[s];
-      return inv && inv.qty <= 0;
-    });
-
-  // Clear selection if selected size becomes unavailable after load
-  useEffect(() => {
-    if (selectedSize && inventoryLoaded && !inventoryFailed && !isSizeAvailable(selectedSize)) {
-      setSizeUnavailableMessage("This size is on backorder — you can still place your order, it will ship when restocked.");
-    }
-  }, [inventoryLoaded, inventoryBySize, selectedSize, inventoryFailed]);
-
-  // Clear unavailable message when user selects a new size
   const handleSizeSelect = (size: string) => {
     setSelectedSize(size);
-    setSizeUnavailableMessage(
-      isSizeAvailable(size)
-        ? null
-        : "This size is on backorder — you can still place your order, it will ship when restocked."
-    );
     const inv = inventoryBySize[size];
     setSelectedSizeSku(inv?.sku || null);
   };
@@ -207,35 +176,25 @@ export default function Shop() {
                             />
                           ))
                         ) : (
-                          sizes.map((s) => {
-                            const isBackorder = !isSizeAvailable(s);
-                            return (
-                              <button
-                                key={s}
-                                type="button"
-                                className={
-                                  `px-4 py-2 rounded-full border text-sm transition-colors ` +
-                                  (selectedSize === s
-                                    ? "bg-black text-white border-transparent"
-                                    : isBackorder
-                                      ? "bg-transparent text-muted-foreground border-dashed border-black/40"
-                                      : "bg-transparent text-black border-black")
-                                }
-                                onClick={() => handleSizeSelect(s)}
-                                aria-pressed={selectedSize === s}
-                                aria-label={isBackorder ? `Select size ${s} (backorder)` : `Select size ${s}`}
-                              >
-                                {s}
-                              </button>
-                            );
-                          })
+                          sizes.map((s) => (
+                            <button
+                              key={s}
+                              type="button"
+                              className={
+                                `px-4 py-2 rounded-full border text-sm transition-colors ` +
+                                (selectedSize === s
+                                  ? "bg-black text-white border-transparent"
+                                  : "bg-transparent text-black border-black")
+                              }
+                              onClick={() => handleSizeSelect(s)}
+                              aria-pressed={selectedSize === s}
+                              aria-label={`Select size ${s}`}
+                            >
+                              {s}
+                            </button>
+                          ))
                         )}
                       </div>
-                      {sizeUnavailableMessage && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {sizeUnavailableMessage}
-                        </p>
-                      )}
                     </div>
 
                     <Button
@@ -250,7 +209,7 @@ export default function Shop() {
                       }}
                       disabled={!selectedSize}
                     >
-                      {selectedSize && !isSizeAvailable(selectedSize) ? "Claim your bundle (backorder)" : "Claim your bundle"}
+                      Claim your bundle
                     </Button>
 
                     <div className="space-y-2">
