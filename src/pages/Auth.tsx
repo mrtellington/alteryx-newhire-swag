@@ -142,9 +142,9 @@ const Auth = () => {
         description: "Unable to process your request. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const sendPasswordEmail = async () => {
