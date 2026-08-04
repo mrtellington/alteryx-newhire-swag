@@ -130,17 +130,10 @@ const Auth = () => {
       if (result.has_ordered) {
         // User has already ordered - redirect to order status page
         navigate(`/order-status?email=${encodeURIComponent(email)}`);
-      } else if (result.user_exists) {
-        // User exists but hasn't ordered - send password email
+      } else {
+        // Authorized domain: send password (account is provisioned automatically if new)
         await sendPasswordEmail();
         setUserHasOrder(false);
-      } else {
-        // User doesn't exist
-        toast({ 
-          title: "Email not found", 
-          description: "This email is not registered for the New Hire Bundle.",
-          variant: "destructive"
-        });
       }
     } catch (error) {
       console.error("Error checking email:", error);

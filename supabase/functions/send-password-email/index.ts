@@ -39,61 +39,120 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
+    // Restrict access to authorized domains only
+    if (
+      !normalizedEmail.endsWith("@alteryx.com") &&
+      !normalizedEmail.endsWith("@whitestonebranding.com")
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: "This application is only available to authorized Alteryx New Hire users.",
+        }),
+        {
+          status: 403,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Initialize Supabase client with service role
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // First, check if user exists in our users table
-    const { data: userData, error: userError } = await supabase
+    // Look up (or provision) the application user record — one row per email
+    let { data: userData } = await supabase
       .from('users')
       .select('id, email, auth_user_id, first_name')
-      .eq('email', email.toLowerCase())
-      .eq('invited', true)
-      .single();
-
-    if (userError || !userData) {
-      console.error("Error fetching user from users table:", userError);
-      return new Response(
-        JSON.stringify({ error: "User not found or not invited" }),
-        {
-          status: 404,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
-
-    // If user doesn't have auth_user_id, we need to create one first
-    if (!userData.auth_user_id) {
-      console.error("User has no auth_user_id, cannot send password email");
-      return new Response(
-        JSON.stringify({ error: "User authentication not set up" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
-
-    // Find the auth user
-    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userData.auth_user_id);
-    
-    if (authError || !authUser.user) {
-      console.error("Error fetching auth user:", authError);
-      return new Response(
-        JSON.stringify({ error: "Authentication user not found" }),
-        {
-          status: 404,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
+      .eq('email', normalizedEmail)
+      .maybeSingle();
 
     // Generate a cryptographically secure temporary password
     const tempPassword = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
-    
-    const { error: updateError } = await supabase.auth.admin.updateUserById(userData.auth_user_id, {
+
+    // Resolve the auth account: reuse existing, otherwise create it
+    let authUserId: string | null = userData?.auth_user_id ?? null;
+
+    if (authUserId) {
+      const { data: existingAuth } = await supabase.auth.admin.getUserById(authUserId);
+      if (!existingAuth?.user) authUserId = null;
+    }
+
+    if (!authUserId) {
+      const { data: created, error: createError } = await supabase.auth.admin.createUser({
+        email: normalizedEmail,
+        password: tempPassword,
+        email_confirm: true,
+      });
+
+      if (created?.user) {
+        authUserId = created.user.id;
+      } else {
+        // Auth account already exists — find and link it
+        let page = 1;
+        const perPage = 200;
+        while (!authUserId) {
+          const { data: list } = await supabase.auth.admin.listUsers({ page, perPage });
+          if (!list?.users?.length) break;
+          const match = list.users.find(
+            (u) => u.email?.toLowerCase() === normalizedEmail
+          );
+          if (match) { authUserId = match.id; break; }
+          if (list.users.length < perPage) break;
+          page++;
+        }
+
+        if (!authUserId) {
+          console.error("Could not create or find auth user:", createError);
+          return new Response(
+            JSON.stringify({ error: "Unable to set up your account. Please contact support." }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+    }
+
+    if (!userData) {
+      const { data: inserted, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          email: normalizedEmail,
+          full_name: normalizedEmail.split('@')[0],
+          invited: true,
+          auth_user_id: authUserId,
+          shipping_address: {},
+        })
+        .select('id, email, auth_user_id, first_name')
+        .single();
+
+      if (insertError) {
+        // Race: a row was created concurrently — reuse it
+        const { data: existing } = await supabase
+          .from('users')
+          .select('id, email, auth_user_id, first_name')
+          .eq('email', normalizedEmail)
+          .maybeSingle();
+        userData = existing ?? null;
+      } else {
+        userData = inserted;
+      }
+
+      if (!userData) {
+        return new Response(
+          JSON.stringify({ error: "Unable to set up your account. Please contact support." }),
+          { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+    }
+
+    if (userData.auth_user_id !== authUserId) {
+      await supabase.from('users').update({ auth_user_id: authUserId, invited: true }).eq('id', userData.id);
+    }
+
+    const { error: updateError } = await supabase.auth.admin.updateUserById(authUserId, {
       password: tempPassword
     });
 
@@ -114,7 +173,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Send email with the temporary password
     const emailResponse = await resend.emails.send({
       from: "Whitestone <admin@whitestonebranding.com>",
-      to: [email],
+      to: [normalizedEmail],
       bcc: ["dev@whitestonebranding.com"],
       subject: "Password to Redeem the Alteryx New Hire Bundle",
       html: `
