@@ -80,7 +80,7 @@ const handler = async (req: Request): Promise<Response> => {
         .from('users')
         .insert({
           email: normalizedEmail,
-          full_name: normalizedEmail.split('@')[0],
+          full_name: '',
           invited: true,
           shipping_address: {},
         })
