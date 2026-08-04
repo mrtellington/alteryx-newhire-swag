@@ -106,7 +106,7 @@ const OrderStatus = () => {
 
   if (error) {
     return (
-      <main className="min-h-screen bg-brand-blue flex flex-col items-center justify-start pt-16 px-4">
+      <main className="min-h-screen bg-black flex flex-col items-center justify-start pt-16 px-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle>Order Status</CardTitle>
