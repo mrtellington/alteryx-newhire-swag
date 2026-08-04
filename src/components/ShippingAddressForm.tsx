@@ -124,14 +124,6 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
     };
   }, []);
 
-  const _unusedRegionLabel = useMemo(() => {
-    const c = form.getValues("country");
-    if (c === "US") return "State";
-    if (c === "CA") return "Province";
-    if (c === "GB") return "County";
-    return "Region/State";
-  }, [form.watch("country")]);
-
   const applyAutocomplete = (addr: NormalizedAddress) => {
     console.log("Applying autocomplete address:", addr);
     form.setValue("line1", addr.line1 || "");
