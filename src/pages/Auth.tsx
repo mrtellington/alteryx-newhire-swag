@@ -39,15 +39,41 @@ const Auth = () => {
     // Redirect if already logged in
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_, session) => {
       if (session) {
-        // Check if user has already placed an order
+        const sessionEmail = session.user.email ?? "";
+
+        // Enforce allowed email domains at the app boundary
+        if (!isAllowedEmailDomain(sessionEmail)) {
+          await supabase.auth.signOut();
+          toast({
+            title: "Access denied",
+            description: "This application is only available to authorized Alteryx New Hire users.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Ensure a users record exists (created once, never duplicated)
         try {
-          const { data: users } = await supabase
-            .from("users")
-            .select("order_submitted")
-            .eq("auth_user_id", session.user.id)
-            .single();
-          
-          if (users?.order_submitted) {
+          const { data, error } = await supabase.rpc("ensure_user_record");
+          const result: any = typeof data === "string" ? JSON.parse(data) : data;
+
+          if (error) {
+            console.error("Error ensuring user record:", error);
+            navigate("/shop", { replace: true });
+            return;
+          }
+
+          if (result && result.success === false) {
+            await supabase.auth.signOut();
+            toast({
+              title: "Access denied",
+              description: "This application is only available to authorized Alteryx New Hire users.",
+              variant: "destructive",
+            });
+            return;
+          }
+
+          if (result?.order_submitted) {
             navigate("/thank-you", { replace: true });
           } else {
             navigate("/shop", { replace: true });
