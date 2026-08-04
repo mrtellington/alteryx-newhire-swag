@@ -74,6 +74,14 @@ export type Database = {
           id: string
           order_number: string | null
           shipping_carrier: string | null
+          shipping_city: string | null
+          shipping_country: string | null
+          shipping_line1: string | null
+          shipping_line2: string | null
+          shipping_name: string | null
+          shipping_phone: string | null
+          shipping_postal_code: string | null
+          shipping_region: string | null
           status: string | null
           tee_size: string | null
           tracking_number: string | null
@@ -84,6 +92,14 @@ export type Database = {
           id?: string
           order_number?: string | null
           shipping_carrier?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_line1?: string | null
+          shipping_line2?: string | null
+          shipping_name?: string | null
+          shipping_phone?: string | null
+          shipping_postal_code?: string | null
+          shipping_region?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null
@@ -94,6 +110,14 @@ export type Database = {
           id?: string
           order_number?: string | null
           shipping_carrier?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_line1?: string | null
+          shipping_line2?: string | null
+          shipping_name?: string | null
+          shipping_phone?: string | null
+          shipping_postal_code?: string | null
+          shipping_region?: string | null
           status?: string | null
           tee_size?: string | null
           tracking_number?: string | null
