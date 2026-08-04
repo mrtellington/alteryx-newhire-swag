@@ -101,6 +101,37 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
     return "Region/State";
   }, [form.watch("country")]);
 
+  // Prefill name fields from the user's saved profile
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth?.user) return;
+      const { data: profile } = await supabase
+        .from("users")
+        .select("first_name, last_name, full_name")
+        .eq("auth_user_id", auth.user.id)
+        .maybeSingle();
+      if (!profile || cancelled) return;
+      const parts = (profile.full_name || "").trim().split(/\s+/);
+      const first = profile.first_name || parts[0] || "";
+      const last = profile.last_name || (parts.length > 1 ? parts.slice(1).join(" ") : "");
+      if (first && !form.getValues("first_name")) form.setValue("first_name", first);
+      if (last && !form.getValues("last_name")) form.setValue("last_name", last);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const _unusedRegionLabel = useMemo(() => {
+    const c = form.getValues("country");
+    if (c === "US") return "State";
+    if (c === "CA") return "Province";
+    if (c === "GB") return "County";
+    return "Region/State";
+  }, [form.watch("country")]);
+
   const applyAutocomplete = (addr: NormalizedAddress) => {
     console.log("Applying autocomplete address:", addr);
     form.setValue("line1", addr.line1 || "");
