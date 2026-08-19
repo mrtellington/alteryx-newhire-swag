@@ -166,6 +166,7 @@ export default function Shop() {
                     <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-[hsl(var(--deep))]">New Hire Bundle</h1>
                     <div>
                       <p className="font-medium">Choose your tee size</p>
+                      <p className="text-sm text-muted-foreground mt-1">Ordering is currently closed.</p>
                       <div className="mt-2 flex flex-wrap gap-2">
                         {sizeInventoryQuery.isLoading ? (
                           // Loading skeleton for size buttons
@@ -180,15 +181,14 @@ export default function Shop() {
                             <button
                               key={s}
                               type="button"
+                              disabled
                               className={
-                                `px-4 py-2 rounded-full border text-sm transition-colors ` +
-                                (selectedSize === s
-                                  ? "bg-black text-white border-transparent"
-                                  : "bg-transparent text-black border-black")
+                                `px-4 py-2 rounded-full border text-sm transition-colors opacity-50 cursor-not-allowed ` +
+                                "bg-transparent text-black border-black"
                               }
-                              onClick={() => handleSizeSelect(s)}
+                              onClick={() => {}}
                               aria-pressed={selectedSize === s}
-                              aria-label={`Select size ${s}`}
+                              aria-label={`Size ${s} unavailable, ordering closed`}
                             >
                               {s}
                             </button>
@@ -207,9 +207,9 @@ export default function Shop() {
                           setShowForm(true);
                         }
                       }}
-                      disabled={!selectedSize}
+                      disabled
                     >
-                      Claim your bundle
+                      Ordering closed
                     </Button>
 
                     <div className="space-y-2">
