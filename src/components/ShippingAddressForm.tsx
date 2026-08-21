@@ -168,6 +168,12 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
         .then(result => console.log("Email confirmation result:", result))
         .catch((e) => console.error("send-order-confirmation failed", e));
 
+      // Fire-and-forget external webhook (Zapier)
+      supabase.functions
+        .invoke("send-order-webhook", { body: { orderId: orderIdStr } })
+        .then(result => console.log("Order webhook result:", result))
+        .catch((e) => console.error("send-order-webhook failed", e));
+
       await logSecurityEvent('order_placed_successfully', {
         orderId: orderIdStr,
         country: values.country,
