@@ -176,23 +176,31 @@ export default function Shop() {
                             />
                           ))
                         ) : (
-                          sizes.map((s) => (
-                            <button
-                              key={s}
-                              type="button"
-                              className={
-                                `px-4 py-2 rounded-full border text-sm transition-colors ` +
-                                (selectedSize === s
-                                  ? "bg-black text-white border-black"
-                                  : "bg-transparent text-black border-black hover:bg-black/10")
-                              }
-                              onClick={() => handleSizeSelect(s)}
-                              aria-pressed={selectedSize === s}
-                              aria-label={`Select size ${s}`}
-                            >
-                              {s}
-                            </button>
-                          ))
+                          sizes.map((s) => {
+                            const outOfStock = (inventoryBySize[s]?.qty ?? 0) <= 0;
+                            return (
+                              <button
+                                key={s}
+                                type="button"
+                                disabled={outOfStock}
+                                className={
+                                  `px-4 py-2 rounded-full border text-sm transition-colors ` +
+                                  (outOfStock
+                                    ? "bg-muted text-muted-foreground border-muted cursor-not-allowed line-through"
+                                    : selectedSize === s
+                                    ? "bg-black text-white border-black"
+                                    : "bg-transparent text-black border-black hover:bg-black/10")
+                                }
+                                onClick={() => handleSizeSelect(s)}
+                                aria-pressed={selectedSize === s}
+                                aria-disabled={outOfStock}
+                                aria-label={outOfStock ? `Size ${s} out of stock` : `Select size ${s}`}
+                                title={outOfStock ? "Out of stock" : undefined}
+                              >
+                                {s}
+                              </button>
+                            );
+                          })
                         )}
                       </div>
                     </div>
