@@ -51,6 +51,3 @@ verify_jwt = false
 
 [functions.admin-login-fix]
 verify_jwt = false
-
-[functions.reset-orders]
-verify_jwt = false
