@@ -374,7 +374,7 @@ export type Database = {
       nuclear_reset_all_data: { Args: never; Returns: Json }
       place_order:
         | { Args: never; Returns: string }
-        | { Args: { tee_size_param?: string }; Returns: string }
+        | { Args: { tee_size_param: string }; Returns: string }
         | {
             Args: { tee_size_param: string; user_uuid: string }
             Returns: string
