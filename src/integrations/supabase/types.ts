@@ -376,7 +376,7 @@ export type Database = {
         | { Args: never; Returns: string }
         | { Args: { tee_size_param?: string }; Returns: string }
         | {
-            Args: { tee_size_param?: string; user_uuid: string }
+            Args: { tee_size_param: string; user_uuid: string }
             Returns: string
           }
       test_policy_for_dev: { Args: never; Returns: boolean }
