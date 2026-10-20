@@ -297,6 +297,25 @@ export type Database = {
           }
       debug_user_access: { Args: never; Returns: Json }
       ensure_user_record: { Args: never; Returns: Json }
+      find_order_duplicates: {
+        Args: {
+          p_city: string
+          p_exclude_order?: string
+          p_line1: string
+          p_name: string
+          p_postal: string
+        }
+        Returns: {
+          date_submitted: string
+          name_matches: boolean
+          order_id: string
+          order_number: string
+          shipping_city: string
+          shipping_line1: string
+          shipping_name: string
+          shipping_postal_code: string
+        }[]
+      }
       force_update_admin_password: { Args: never; Returns: Json }
       generate_order_number: { Args: never; Returns: string }
       get_admin_role: { Args: never; Returns: string }
@@ -367,6 +386,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      normalize_match_text: { Args: { t: string }; Returns: string }
       notify_slack_on_events: {
         Args: { event_data?: Json; event_type_param: string }
         Returns: undefined
