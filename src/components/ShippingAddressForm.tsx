@@ -154,7 +154,20 @@ export default function ShippingAddressForm({ selectedSize, onSuccess }: Shippin
       if (updateErr) throw updateErr;
 
       const { data: orderId, error: rpcErr } = await supabase.rpc("place_order", { tee_size_param: selectedSize });
-      if (rpcErr) throw rpcErr;
+      if (rpcErr) {
+        if (rpcErr.message?.includes("DUPLICATE_ORDER")) {
+          await supabase.functions
+            .invoke("duplicate-order-alert", { body: { blocked: true } })
+            .catch((e) => console.error("duplicate-order-alert failed", e));
+          throw new Error("An order has already been placed for this name and shipping address. Please contact globalonboarding@alteryx.com if you believe this is a mistake.");
+        }
+        throw rpcErr;
+      }
+
+      // Fire-and-forget address-match alert (does not block the order)
+      supabase.functions
+        .invoke("duplicate-order-alert", { body: { orderId: orderId as unknown as string } })
+        .catch((e) => console.error("duplicate-order-alert failed", e));
 
       const orderIdStr = orderId as unknown as string;
       console.log("Order placed successfully:", { orderId: orderIdStr, selectedSize });
